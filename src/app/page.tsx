@@ -184,7 +184,7 @@ export default function Home() {
         <div className="container mx-auto px-4 text-center">
           <div className="flex items-center justify-center gap-2 font-headline text-2xl font-bold text-primary mb-6">
             <Scissors className="h-6 w-6 text-primary" />
-            SalonVerse
+            Salon Chair
           </div>
           <p className="text-muted-foreground mb-8">Empowering local salons with digital booking solutions.</p>
           <div className="flex justify-center gap-8 text-sm text-muted-foreground">
@@ -194,7 +194,7 @@ export default function Home() {
             <Link href="/owner/dashboard" className="text-primary font-medium">For Salon Owners</Link>
           </div>
           <div className="mt-8 pt-8 border-t text-xs text-muted-foreground">
-            © 2024 SalonVerse Marketplace. All rights reserved.
+            © 2024 Salon Chair Marketplace. All rights reserved.
           </div>
         </div>
       </footer>

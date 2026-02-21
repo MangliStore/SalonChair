@@ -36,7 +36,7 @@ export function Navbar() {
           <div className="rounded-lg bg-primary/10 p-1.5">
             <Scissors className="h-6 w-6 text-primary" />
           </div>
-          SalonVerse
+          Salon Chair
         </Link>
         <div className="flex items-center gap-4">
           <Link href="/owner/dashboard">

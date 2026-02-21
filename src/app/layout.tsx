@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
 
 export const metadata: Metadata = {
-  title: 'SalonVerse | Modern Salon Booking',
+  title: 'Salon Chair | Modern Salon Booking',
   description: 'Book your next appointment at the best local salons.',
 };
 

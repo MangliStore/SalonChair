@@ -5,7 +5,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "Represents a user of the SalonVerse app, which can be a public user requesting appointments or a salon owner managing their shop. User registration requires a verified Gmail account.",
+      "description": "Represents a user of the Salon Chair app, which can be a public user requesting appointments or a salon owner managing their shop. User registration requires a verified Gmail account.",
       "properties": {
         "id": {
           "type": "string",
@@ -38,7 +38,7 @@
         },
         "registrationDateTime": {
           "type": "string",
-          "description": "The date and time when the user registered on the SalonVerse platform.",
+          "description": "The date and time when the user registered on the Salon Chair platform.",
           "format": "date-time"
         }
       },
@@ -56,7 +56,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Salon",
       "type": "object",
-      "description": "Represents a salon listed on the SalonVerse platform, managed by a salon owner. Includes details for discovery and administration.",
+      "description": "Represents a salon listed on the Salon Chair platform, managed by a salon owner. Includes details for discovery and administration.",
       "properties": {
         "id": {
           "type": "string",

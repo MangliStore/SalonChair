@@ -47,7 +47,7 @@ export default function LoginPage() {
             <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
               <Scissors className="h-6 w-6 text-primary" />
             </div>
-            <CardTitle className="text-2xl font-bold">Sign in to SalonVerse</CardTitle>
+            <CardTitle className="text-2xl font-bold">Sign in to Salon Chair</CardTitle>
             <CardDescription>
               Use your Gmail account to manage your salon and bookings.
             </CardDescription>
