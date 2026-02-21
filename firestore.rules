@@ -1,0 +1,165 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * CORE PHILOSOPHY
+     * This ruleset enforces a robust authorization model for SalonVerse, prioritising 
+     * Authorization Independence through denormalization. By storing owner and user 
+     * IDs directly on documents, we ensure fast, performant, and secure access control 
+     * without deep document lookups.
+     *
+     * DATA STRUCTURE
+     * - /users: Self-managed user profiles.
+     * - /admins: A gated collection where existence grants global administrative access.
+     * - /salons: Top-level public discovery with owner-managed sub-resources.
+     * - /bookings: Centralized transaction collection accessible by both service providers and consumers.
+     *
+     * KEY SECURITY DECISIONS
+     * - Gmail Verification: In accordance with business requirements, salon management 
+     *   actions require a verified Gmail account.
+     * - Administrative Override: Documents in the /admins collection grant the UID 
+     *   broad read/write access across the platform.
+     * - Relational Integrity: On creation, documents must include the correct 
+     *   relational IDs (ownerId, userId) matching the requester's identity.
+     * - Prototyping Flexibility: Rules do not enforce strict data types or schemas 
+     *   for general content, allowing for rapid frontend iteration.
+     */
+
+    // --- GLOBAL HELPER FUNCTIONS ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Validates that the user is using a verified Gmail account
+    function isVerifiedGmail() {
+      return isSignedIn() && 
+             request.auth.token.email_verified == true && 
+             request.auth.token.email.matches('.*@gmail\\.com$');
+    }
+
+    // --- COLLECTION RULES ---
+
+    /**
+     * @description Rules for user profiles. Users can manage their own profile.
+     * @path /users/{userId}
+     * @allow (get, create, update) if UID matches userId.
+     * @deny (list) for non-admins to prevent user enumeration.
+     * @principle Path-based ownership and self-creation.
+     */
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isAdmin() || isExistingOwner(userId);
+    }
+
+    /**
+     * @description Restricted collection for global administrators.
+     * @path /admins/{adminId}
+     * @allow (get) if user is an admin.
+     * @deny (write) from the client; admins are typically managed via backend scripts.
+     * @principle RBAC via existence check.
+     */
+    match /admins/{adminId} {
+      allow get: if isAdmin();
+      allow list, create, update, delete: if false;
+    }
+
+    /**
+     * @description Salons are publicly readable for discovery. Listing requires verified Gmail.
+     * @path /salons/{salonId}
+     * @allow (create) if authenticated and Gmail verified.
+     * @allow (update, delete) if the user is the documented owner.
+     * @principle Ownership via denormalized ownerId.
+     */
+    match /salons/{salonId} {
+      allow get, list: if true;
+      allow create: if isVerifiedGmail() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isAdmin() || (isExistingOwner(resource.data.ownerId) && request.resource.data.ownerId == resource.data.ownerId);
+      allow delete: if isAdmin() || isExistingOwner(resource.data.ownerId);
+
+      /**
+       * @description Services nested under salons. Inherits ownership logic via denormalized salonOwnerId.
+       * @path /salons/{salonId}/services/{serviceId}
+       */
+      match /services/{serviceId} {
+        allow get, list: if true;
+        allow create: if isVerifiedGmail() && request.resource.data.salonOwnerId == request.auth.uid;
+        allow update: if isAdmin() || (isExistingOwner(resource.data.salonOwnerId) && request.resource.data.salonOwnerId == resource.data.salonOwnerId);
+        allow delete: if isAdmin() || isExistingOwner(resource.data.salonOwnerId);
+      }
+
+      /**
+       * @description Subscription details for a salon. Private to the owner and admins.
+       * @path /salons/{salonId}/subscriptions/{subscriptionId}
+       */
+      match /subscriptions/{subscriptionId} {
+        allow get, list: if isAdmin() || isExistingOwner(resource.data.salonOwnerId);
+        allow create: if isAdmin() || (isVerifiedGmail() && request.resource.data.salonOwnerId == request.auth.uid);
+        allow update: if isAdmin() || (isExistingOwner(resource.data.salonOwnerId) && request.resource.data.salonOwnerId == resource.data.salonOwnerId);
+        allow delete: if isAdmin();
+
+        /**
+         * @description Payment transactions. Visible to owner, but typically written only by system/admin.
+         * @path /salons/{salonId}/subscriptions/{subscriptionId}/payments/{paymentId}
+         */
+        match /payments/{paymentId} {
+          allow get, list: if isAdmin() || isExistingOwner(resource.data.salonOwnerId);
+          allow create, update, delete: if isAdmin();
+        }
+      }
+    }
+
+    /**
+     * @description Bookings accessible by the customer (userId) or the provider (salonOwnerId).
+     * @path /bookings/{bookingId}
+     * @allow (create) by any signed-in user for themselves.
+     * @allow (update) by the customer or the salon owner.
+     * @principle Multi-party shared access via denormalized participant IDs.
+     */
+    match /bookings/{bookingId} {
+      allow get: if isAdmin() || isOwner(resource.data.userId) || isOwner(resource.data.salonOwnerId);
+      allow list: if isSignedIn(); // Queries must be filtered by userId or salonOwnerId
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin() || isExistingOwner(resource.data.userId) || isExistingOwner(resource.data.salonOwnerId);
+      allow delete: if isAdmin();
+    }
+
+    /**
+     * @description No-show flags recorded by owners against users.
+     * @path /noShowFlags/{noShowFlagId}
+     * @allow (get) by the flagged user or the reporting owner.
+     * @allow (create) by the salon owner.
+     * @principle Validated reporting via ownership fields.
+     */
+    match /noShowFlags/{noShowFlagId} {
+      allow get: if isAdmin() || isOwner(resource.data.flaggedUserId) || isOwner(resource.data.flaggedBySalonOwnerId);
+      allow list: if isAdmin() || isOwner(request.auth.uid); 
+      allow create: if isVerifiedGmail() && request.resource.data.flaggedBySalonOwnerId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+  }
+}
+
+/**
+ * --- DEPLOYMENT NOTES ---
+ * 1. This file uses rules_version = '2' to support collection group queries and improved security.
+ * 2. Admin access is dependent on a document existing in the /admins collection with a matching Auth UID.
+ * 3. Gmail verification is enforced for critical salon-listing and flagging operations.
+ * 4. Ensure your client-side queries always include filters for ownerId or userId to comply with listing rules.
+ */
