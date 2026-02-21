@@ -1,0 +1,29 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "salon-1",
+      "description": "Modern hair salon interior",
+      "imageUrl": "https://picsum.photos/seed/salon1/600/400",
+      "imageHint": "hair salon"
+    },
+    {
+      "id": "salon-2",
+      "description": "Barber shop with vintage chairs",
+      "imageUrl": "https://picsum.photos/seed/salon2/600/400",
+      "imageHint": "barber shop"
+    },
+    {
+      "id": "salon-3",
+      "description": "Spa and wellness center",
+      "imageUrl": "https://picsum.photos/seed/salon3/600/400",
+      "imageHint": "spa wellness"
+    },
+    {
+      "id": "salon-4",
+      "description": "Beauty parlor reception",
+      "imageUrl": "https://picsum.photos/seed/salon4/600/400",
+      "imageHint": "beauty parlor"
+    }
+  ]
+}
