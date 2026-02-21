@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -368,7 +369,8 @@
   "auth": {
     "providers": [
       "password",
-      "anonymous"
+      "anonymous",
+      "google.com"
     ]
   },
   "firestore": {
@@ -517,7 +519,6 @@
           ]
         }
       }
-    ],
-    "reasoning": "The Firestore data structure for SalonVerse is designed with a strong emphasis on Authorization Independence, Structural Segregation, and Queryability for Authorization Predicates (QAPs). \n\n**Authorization Independence (via Denormalization):**\nTo avoid complex and insecure `get()` calls in Firestore security rules, crucial authorization context is denormalized directly into the documents where it's needed. \n\n1.  **Users (`/users/{userId}`):** User profiles are top-level and self-contained, with `userId` directly mapping to `request.auth.uid`. The `isSalonOwner` field serves as a direct role indicator (DBAC). Admin roles are managed via a separate `/admins/{adminId}` collection for existence checks.\n2.  **Salons (`/salons/{salonId}`):** Salons are top-level for public discoverability. Each `Salon` document contains `ownerId`, allowing direct ownership checks (`resource.data.ownerId == request.auth.uid`) without needing to look up a parent user document.\n3.  **Services (`/salons/{salonId}/services/{serviceId}`):** Services are nested under salons. To achieve authorization independence for `Service` documents, each `Service` document will include a `salonOwnerId` field, directly storing the UID of the salon owner. This eliminates `get()` calls to the parent `Salon` document for ownership verification.\n4.  **Bookings (`/bookings/{bookingId}`):** Bookings are stored at the top level to facilitate efficient queries from both public users (by `userId`) and salon owners (by `salonId`). To ensure authorization independence, each `Booking` document explicitly includes `userId` (the public user who made the booking) and `salonId` (the salon for the booking) and critically, `salonOwnerId` (the UID of the salon's owner). This allows rules to enforce `resource.data.userId == request.auth.uid` for public users and `resource.data.salonOwnerId == request.auth.uid` for salon owners directly from the booking document.\n5.  **Subscriptions (`/salons/{salonId}/subscriptions/{subscriptionId}`):** Subscriptions are nested under salons for direct management by the salon owner. Each `Subscription` document will denormalize `salonOwnerId` to enable direct ownership checks for rules, removing the dependency on the parent `Salon` document.\n6.  **Payments (`/salons/{salonId}/subscriptions/{subscriptionId}/payments/{paymentId}`):** Payments are deeply nested. To maintain authorization independence, each `Payment` document will denormalize `salonId` and `salonOwnerId`. This ensures that rules can directly verify the salon and owner associated with a payment without multiple `get()` calls up the hierarchy.\n7.  **NoShowFlags (`/noShowFlags/{noShowFlagId}`):** No-show flags are top-level. Each `NoShowFlag` document contains `bookingId`, `flaggedBySalonOwnerId`, and `flaggedUserId`, allowing direct authorization checks for the reporting owner, the flagged user, and the associated booking.\n\n**Queryability for Authorization Predicates (QAPs):**\n\n1.  **Salon Discovery:** Publicly visible salons are stored in `/salons/{salonId}`. Rules will ensure that only salons with `verificationStatus == 'Approved'` and `isVisible == true` are readable by unauthenticated users or public users. This enables efficient `list` operations with `where` clauses (e.g., `db.collection('salons').where('city', '==', '...')`) directly on the top-level collection.\n2.  **Salon Management (Owner):** Salon owners can query and manage their salons directly using `db.collection('salons').where('ownerId', '==', request.auth.uid)`. Similar patterns apply to nested services, subscriptions, and payments, all leveraging the denormalized `salonOwnerId`.\n3.  **Booking Management:** Public users can list their own bookings via `db.collection('bookings').where('userId', '==', request.auth.uid)`. Salon owners can list bookings for their salon via `db.collection('bookings').where('salonId', '==', '{salonId}').where('salonOwnerId', '==', request.auth.uid)`.\n4.  **Admin Access:** The `/admins/{adminId}` collection allows for a simple `exists()` check in rules to grant broad administrative access across all collections without relying on specific fields within each document.\n\nThis design minimizes rule complexity, enhances security by reducing `get()` calls (which can introduce latency and security vulnerabilities if not carefully managed), and supports efficient querying as mandated by the QAPs principle."
+    ]
   }
 }

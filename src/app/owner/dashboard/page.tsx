@@ -1,17 +1,20 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navbar } from "@/components/navbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MOCK_SALONS, MOCK_BOOKINGS, Booking } from "@/app/lib/mock-data";
-import { Check, X, Flag, AlertCircle, TrendingUp, Users, Calendar, Scissors, IndianRupee, MapPin } from "lucide-react";
+import { Check, X, Flag, AlertCircle, TrendingUp, Users, Calendar, Scissors, IndianRupee, Mail, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useUser } from "@/firebase";
+import Link from "next/link";
 
 export default function OwnerDashboard() {
+  const { user, isUserLoading } = useUser();
   const { toast } = useToast();
   const [bookings, setBookings] = useState<Booking[]>(MOCK_BOOKINGS);
   const mySalon = MOCK_SALONS[0]; // Simulation for current owner
@@ -30,6 +33,104 @@ export default function OwnerDashboard() {
       description: messages[action],
     });
   };
+
+  if (isUserLoading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-muted-foreground animate-pulse">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Verification Logic: Must be Gmail AND must be verified
+  const isGmail = user?.email?.endsWith("@gmail.com");
+  const isVerified = user?.emailVerified;
+  const canAccess = user && isGmail && isVerified;
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md text-center">
+            <CardHeader>
+              <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                <Scissors className="h-6 w-6 text-primary" />
+              </div>
+              <CardTitle>Salon Owner Portal</CardTitle>
+              <CardDescription>Please sign in to manage your salon.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href="/login">
+                <Button className="w-full">Go to Sign In</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+
+  if (!canAccess) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center p-4">
+          <Card className="w-full max-w-lg border-destructive/20 shadow-xl">
+            <CardHeader className="text-center">
+              <div className="mx-auto w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
+                <ShieldAlert className="h-8 w-8 text-destructive" />
+              </div>
+              <CardTitle className="text-2xl text-destructive">Verification Required</CardTitle>
+              <CardDescription>
+                To list and manage a salon, you must use a verified Gmail account.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="bg-muted p-4 rounded-lg space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium flex items-center gap-2">
+                    <Mail className="h-4 w-4" /> Email Address
+                  </span>
+                  <Badge variant={isGmail ? "default" : "destructive"}>
+                    {isGmail ? "Gmail Detected" : "Non-Gmail"}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium flex items-center gap-2">
+                    <Check className="h-4 w-4" /> Email Verified
+                  </span>
+                  <Badge variant={isVerified ? "default" : "destructive"}>
+                    {isVerified ? "Verified" : "Not Verified"}
+                  </Badge>
+                </div>
+              </div>
+              
+              <div className="text-sm text-muted-foreground bg-orange-50 p-4 rounded-lg border border-orange-100">
+                <p className="font-semibold text-orange-900 mb-1">Important:</p>
+                <ul className="list-disc pl-5 space-y-1 text-orange-800">
+                  <li>Registration is strictly limited to @gmail.com addresses.</li>
+                  <li>Your email must be verified. Google Sign-In usually handles this automatically.</li>
+                </ul>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <Link href="/login" className="w-full">
+                  <Button variant="outline" className="w-full">Try Another Account</Button>
+                </Link>
+                <p className="text-center text-xs text-muted-foreground">
+                  Current: {user.email}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
