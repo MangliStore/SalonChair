@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { Scissors, User, Settings, ShieldCheck } from "lucide-react";
+import { Scissors, User, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Navbar() {
@@ -20,12 +20,6 @@ export function Navbar() {
             <Button variant="ghost" size="sm" className="hidden sm:flex gap-2">
               <Settings className="h-4 w-4" />
               Salon Dashboard
-            </Button>
-          </Link>
-          <Link href="/scbadmin">
-            <Button variant="ghost" size="sm" className="hidden sm:flex gap-2 text-muted-foreground">
-              <ShieldCheck className="h-4 w-4" />
-              Admin
             </Button>
           </Link>
           <Button variant="outline" size="sm" className="gap-2">
