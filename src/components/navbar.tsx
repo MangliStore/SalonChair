@@ -22,7 +22,7 @@ export function Navbar() {
               Salon Dashboard
             </Button>
           </Link>
-          <Link href="/admin/dashboard">
+          <Link href="/scbadmin">
             <Button variant="ghost" size="sm" className="hidden sm:flex gap-2 text-muted-foreground">
               <ShieldCheck className="h-4 w-4" />
               Admin
