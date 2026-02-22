@@ -22,7 +22,6 @@ service cloud.firestore {
 
     function isAdmin() {
       // Check for existence in the admins collection. 
-      // Note: We avoid calling isAdmin() inside the admins collection rule to prevent recursion.
       return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
@@ -92,13 +91,18 @@ service cloud.firestore {
 
     /**
      * @description Bookings accessible by the customer (userId) or the provider (salonOwnerId).
-     * Enforcing resource.data checks on 'read' (get/list) ensures users can only query their own bookings.
      */
     match /bookings/{bookingId} {
-      allow read: if isSignedIn() && (
-        isAdmin() || 
+      // Separated list and get for clearer evaluation
+      allow list: if isSignedIn() && (
         request.auth.uid == resource.data.userId || 
-        request.auth.uid == resource.data.salonOwnerId
+        request.auth.uid == resource.data.salonOwnerId ||
+        isAdmin()
+      );
+      allow get: if isSignedIn() && (
+        request.auth.uid == resource.data.userId || 
+        request.auth.uid == resource.data.salonOwnerId ||
+        isAdmin()
       );
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update: if isSignedIn() && (
@@ -114,7 +118,7 @@ service cloud.firestore {
      */
     match /noShowFlags/{noShowFlagId} {
       allow get: if isAdmin() || isOwner(resource.data.flaggedUserId) || isOwner(resource.data.flaggedBySalonOwnerId);
-      allow list: if isAdmin() || isSignedIn(); // Typically filtered by owner or user
+      allow list: if isAdmin() || isSignedIn(); 
       allow create: if isVerifiedGmail() && request.resource.data.flaggedBySalonOwnerId == request.auth.uid;
       allow update, delete: if isAdmin();
     }
