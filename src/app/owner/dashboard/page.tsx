@@ -64,7 +64,6 @@ export default function OwnerDashboard() {
   // Fetch bookings for this salon owner
   const bookingsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
-    // Removed orderBy to prevent composite index requirement crashes
     return query(
       collection(db, "bookings"),
       where("salonOwnerId", "==", user.uid)
@@ -194,26 +193,23 @@ export default function OwnerDashboard() {
     }, 1500);
   };
 
-  if (isUserLoading || isSalonLoading) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Navbar />
-        <div className="flex-1 flex flex-col items-center justify-center gap-4">
-          <Loader2 className="h-10 w-10 text-primary animate-spin" />
-          <p className="text-muted-foreground font-medium">Loading Dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
   const isGmail = user?.email?.endsWith("@gmail.com");
   const isVerified = user?.emailVerified;
   const canAccess = user && isGmail && isVerified;
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Navbar />
+  // Render Logic
+  const renderContent = () => {
+    if (isUserLoading || isSalonLoading) {
+      return (
+        <div className="flex-1 flex flex-col items-center justify-center gap-4">
+          <Loader2 className="h-10 w-10 text-primary animate-spin" />
+          <p className="text-muted-foreground font-medium">Loading Dashboard...</p>
+        </div>
+      );
+    }
+
+    if (!user) {
+      return (
         <main className="flex-1 flex items-center justify-center p-4">
           <Card className="w-full max-w-md text-center">
             <CardHeader>
@@ -230,14 +226,11 @@ export default function OwnerDashboard() {
             </CardContent>
           </Card>
         </main>
-      </div>
-    );
-  }
+      );
+    }
 
-  if (!canAccess) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Navbar />
+    if (!canAccess) {
+      return (
         <main className="flex-1 flex items-center justify-center p-4">
           <Card className="w-full max-w-lg border-destructive/20 shadow-xl">
             <CardHeader className="text-center">
@@ -266,48 +259,44 @@ export default function OwnerDashboard() {
             </CardContent>
           </Card>
         </main>
-      </div>
-    );
-  }
+      );
+    }
 
-  if (!mySalon) {
+    if (!mySalon) {
+      return (
+        <>
+          <main className="flex-1 flex items-center justify-center p-4">
+            <Card className="w-full max-w-md text-center py-8">
+              <CardHeader>
+                <div className="mx-auto w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+                  <Store className="h-10 w-10 text-primary" />
+                </div>
+                <CardTitle className="text-2xl">No Salon Found</CardTitle>
+                <CardDescription>Ready to start your digital journey?</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button className="w-full h-12 text-lg" onClick={openEditModal}>
+                  Setup My Shop Now
+                </Button>
+              </CardContent>
+            </Card>
+          </main>
+          <SalonEditDialog
+            isOpen={isEditModalOpen}
+            onOpenChange={setIsEditModalOpen}
+            formData={salonForm}
+            setFormData={setSalonForm}
+            onSave={handleUpdateSalon}
+            isSubmitting={isSubmitting}
+          />
+        </>
+      );
+    }
+
+    const acceptedBookingsCount = bookings?.filter(b => b.status === 'Accepted').length || 0;
+    const revenue = acceptedBookingsCount * 250;
+
     return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center p-4">
-          <Card className="w-full max-w-md text-center py-8">
-            <CardHeader>
-              <div className="mx-auto w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6">
-                <Store className="h-10 w-10 text-primary" />
-              </div>
-              <CardTitle className="text-2xl">No Salon Found</CardTitle>
-              <CardDescription>Ready to start your digital journey?</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full h-12 text-lg" onClick={openEditModal}>
-                Setup My Shop Now
-              </Button>
-            </CardContent>
-          </Card>
-        </main>
-        <SalonEditDialog
-          isOpen={isEditModalOpen}
-          onOpenChange={setIsEditModalOpen}
-          formData={salonForm}
-          setFormData={setSalonForm}
-          onSave={handleUpdateSalon}
-          isSubmitting={isSubmitting}
-        />
-      </div>
-    );
-  }
-
-  const acceptedBookingsCount = bookings?.filter(b => b.status === 'Accepted').length || 0;
-  const revenue = acceptedBookingsCount * 250;
-
-  return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
       <main className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
@@ -333,7 +322,7 @@ export default function OwnerDashboard() {
         {bookingsError && (
           <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-lg mb-8 text-sm">
             <AlertCircle className="h-4 w-4 inline mr-2" />
-            We encountered a sync issue. If you just deployed, please check your console for index requirements.
+            We encountered a sync issue. Please check your data.
           </div>
         )}
 
@@ -478,6 +467,13 @@ export default function OwnerDashboard() {
           isSubmitting={isSubmitting}
         />
       </main>
+    );
+  };
+
+  return (
+    <div className="dark min-h-screen bg-background text-foreground flex flex-col">
+      <Navbar />
+      {renderContent()}
     </div>
   );
 }
@@ -510,7 +506,7 @@ function SalonEditDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto dark">
         <DialogHeader>
           <DialogTitle>Shop Profile</DialogTitle>
           <DialogDescription>Setup your business details.</DialogDescription>
