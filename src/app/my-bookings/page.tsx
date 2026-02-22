@@ -1,14 +1,13 @@
-
 "use client";
 
 import { useEffect } from "react";
 import { Navbar } from "@/components/navbar";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where, orderBy } from "firebase/firestore";
-import { Calendar, Clock, MapPin, Scissors, AlertCircle, Loader2, ChevronRight } from "lucide-react";
+import { collection, query, where, orderBy, limit } from "firebase/firestore";
+import { Calendar, Clock, Scissors, AlertCircle, Loader2, ChevronRight } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -29,11 +28,12 @@ export default function MyBookings() {
     return query(
       collection(db, "bookings"),
       where("userId", "==", user.uid),
-      orderBy("createdAt", "desc")
+      orderBy("createdAt", "desc"),
+      limit(50)
     );
-  }, [db, user]);
+  }, [db, user?.uid]);
 
-  const { data: bookings, isLoading: isBookingsLoading } = useCollection(bookingsQuery);
+  const { data: bookings, isLoading: isBookingsLoading, error } = useCollection(bookingsQuery);
 
   if (isUserLoading || !user) {
     return (
@@ -52,6 +52,18 @@ export default function MyBookings() {
           <p className="text-muted-foreground">Track your appointment requests and history.</p>
         </div>
 
+        {error && (
+          <div className="bg-destructive/10 border border-destructive/20 text-destructive p-6 rounded-lg mb-8">
+            <div className="flex gap-3 items-center mb-2">
+              <AlertCircle className="h-5 w-5" />
+              <h3 className="font-bold">Sync Error</h3>
+            </div>
+            <p className="text-sm opacity-90 leading-relaxed">
+              We encountered a permission error or a missing index. If you just deployed, please check the browser console for a link to create the required Firestore composite index for bookings.
+            </p>
+          </div>
+        )}
+
         {isBookingsLoading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -60,7 +72,7 @@ export default function MyBookings() {
           <div className="space-y-4">
             {bookings && bookings.length > 0 ? (
               bookings.map((booking: any) => (
-                <Card key={booking.id} className="overflow-hidden">
+                <Card key={booking.id} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex flex-col md:flex-row">
                     <div className="p-6 flex-1">
                       <div className="flex items-center justify-between mb-4">
@@ -88,13 +100,13 @@ export default function MyBookings() {
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Calendar className="h-4 w-4" />
                           <span className="font-medium text-foreground">
-                            {format(parseISO(booking.requestedSlotDateTime), "PPP")}
+                            {booking.requestedSlotDateTime ? format(parseISO(booking.requestedSlotDateTime), "PPP") : "Date TBD"}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Clock className="h-4 w-4" />
                           <span className="font-medium text-foreground">
-                            {format(parseISO(booking.requestedSlotDateTime), "p")}
+                            {booking.requestedSlotDateTime ? format(parseISO(booking.requestedSlotDateTime), "p") : "Time TBD"}
                           </span>
                         </div>
                       </div>
