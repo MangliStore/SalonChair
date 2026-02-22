@@ -1,3 +1,4 @@
+
 # Salon Chair - Modern Salon Booking
 
 A modern, mobile-responsive salon booking marketplace built with Next.js, Tailwind CSS, and Firebase.
@@ -12,24 +13,33 @@ A modern, mobile-responsive salon booking marketplace built with Next.js, Tailwi
 
 ## Deployment to Vercel
 
-This project is optimized for Vercel.
+To get this app live, follow these steps:
 
-### Prerequisites
-- A Vercel account.
-- Your code pushed to a Git provider (GitHub, GitLab, or Bitbucket).
+### 1. Create a GitHub Repository
+1. Go to [GitHub](https://github.com) and create a new **Public** or **Private** repository named `salon-chair`.
+2. Do **not** initialize it with a README or License.
 
-### Steps
-1. **Import Project**: In Vercel, click "Add New" -> "Project" and select your repository.
-2. **Framework**: Ensure the Framework Preset is set to **Next.js**.
-3. **Environment Variables**: 
-   - The current Firebase config is public and bundled in `src/firebase/config.ts`.
-   - If you implement AI features using Genkit, you will need to add `GOOGLE_GENAI_API_KEY` to the Vercel Environment Variables section.
-4. **Deploy**: Click "Deploy". Vercel will provide you with a production URL.
+### 2. Push Code to GitHub
+Open your terminal in your local project folder and run:
+```bash
+git init
+git add .
+git commit -m "Initial commit from Salon Chair Prototype"
+git branch -M main
+git remote add origin https://github.com/YOUR_USERNAME/salon-chair.git
+git push -u origin main
+```
+
+### 3. Connect to Vercel
+1. Log in to [Vercel](https://vercel.com).
+2. Click **"Add New"** -> **"Project"**.
+3. Select your `salon-chair` repository.
+4. Vercel will auto-detect Next.js. Click **"Deploy"**.
 
 ## Firebase Setup
 
 Ensure your Firebase project (`studio-5370622301-6620e`) has the following enabled:
-1. **Authentication**: Enable the Google Sign-In provider in the Firebase Console.
+1. **Authentication**: Enable the **Google** Sign-In provider in the Firebase Console.
 2. **Firestore**: Ensure the security rules from `firestore.rules` are deployed.
 
 ## Tech Stack
