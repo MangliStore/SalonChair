@@ -16,7 +16,11 @@ A modern, mobile-responsive salon booking marketplace built with Next.js, Tailwi
 To get this app live, follow these steps:
 
 ### 1. Create a GitHub Repository
-1. Go to [GitHub](https://github.com) and create a new **Public** or **Private** repository named `salon-chair`.
+1. Go to [GitHub](https://github.com) and create a new **Public** or **Private** repository named 
+
+salon-chair
+
+.
 2. Do **not** initialize it with a README or License.
 
 ### 2. Push Code to GitHub
@@ -35,6 +39,13 @@ git push -u origin main
 2. Click **"Add New"** -> **"Project"**.
 3. Select your `salon-chair` repository.
 4. Vercel will auto-detect Next.js. Click **"Deploy"**.
+
+### 4. CRITICAL: Add Your Vercel Domain to Firebase (IMPORTANT!)
+If you see a `auth/unauthorized-domain` error when signing in on your live Vercel site:
+1. Go to the [Firebase Console](https://console.firebase.google.com/).
+2. Select your project: `studio-5370622301-6620e`.
+3. Go to **Authentication** -> **Settings** -> **Authorized domains**.
+4. Click **Add domain** and paste your Vercel URL (e.g., `salon-chair-xyz.vercel.app`).
 
 ## Firebase Setup
 
