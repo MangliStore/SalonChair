@@ -26,7 +26,8 @@ export default function MyBookings() {
 
   const bookingsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
-    // Removed orderBy to prevent composite index requirement crashes
+    // Query filtered by userId to match security rules
+    // Removed orderBy to avoid requiring a composite index
     return query(
       collection(db, "bookings"),
       where("userId", "==", user.uid),
@@ -34,7 +35,9 @@ export default function MyBookings() {
     );
   }, [db, user?.uid]);
 
-  const { data: rawBookings, isLoading: isBookingsLoading, error } = useCollection(rawQuery => rawQuery);
+  const { data: rawBookings, isLoading: isBookingsLoading, error } = useCollection(bookingsQuery);
+  
+  // Client-side sorting as a safe fallback for missing indexes
   const bookings = rawBookings ? [...rawBookings].sort((a, b) => {
     const dateA = a.createdAt?.seconds || 0;
     const dateB = b.createdAt?.seconds || 0;
@@ -65,7 +68,7 @@ export default function MyBookings() {
               <h3 className="font-bold">Sync Error</h3>
             </div>
             <p className="text-sm opacity-90 leading-relaxed">
-              We encountered an issue fetching your bookings. If you just deployed, please ensure you've checked the browser console for any Firestore index requirements.
+              We encountered an issue fetching your bookings. This is usually due to a missing database index or a permission error.
             </p>
           </div>
         )}
