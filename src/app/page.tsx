@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Navbar } from "@/components/navbar";
 import { MOCK_SALONS, Salon } from "@/app/lib/mock-data";
 import { INDIA_DATA, INDIA_STATES } from "@/app/lib/india-data";
@@ -15,15 +15,25 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Star, Scissors, Info, Clock, SearchX } from "lucide-react";
+import { MapPin, Star, Scissors, Info, Clock, SearchX, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { useUser } from "@/firebase";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [stateFilter, setStateFilter] = useState("all");
   const [cityFilter, setCityFilter] = useState("all");
+
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, isUserLoading, router]);
 
   const cities = useMemo(() => {
     if (stateFilter === "all") return [];
@@ -35,15 +45,24 @@ export default function Home() {
                          salon.city.toLowerCase().includes(search.toLowerCase());
     const matchesState = stateFilter === "all" || salon.state === stateFilter;
     const matchesCity = cityFilter === "all" || salon.city === cityFilter;
-    // For prototype, we show all mock salons that match filters, 
-    // regardless of whether they match the city list (as mock data has its own cities)
     return matchesSearch && matchesState && matchesCity && salon.isAuthorized && salon.isPaid;
   });
 
   const handleStateChange = (val: string) => {
     setStateFilter(val);
-    setCityFilter("all"); // Reset city when state changes
+    setCityFilter("all");
   };
+
+  if (isUserLoading || !user) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 text-primary animate-spin" />
+          <p className="text-muted-foreground font-medium">Verifying access...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

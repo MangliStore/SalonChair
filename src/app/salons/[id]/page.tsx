@@ -8,7 +8,7 @@ import { MOCK_SALONS, Salon } from "@/app/lib/mock-data";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Phone, Info, Calendar as CalendarIcon, Clock, ChevronLeft, CreditCard } from "lucide-react";
+import { MapPin, Phone, Info, Calendar as CalendarIcon, Clock, ChevronLeft, CreditCard, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,11 +17,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useUser } from "@/firebase";
 
 export default function SalonDetail() {
   const { id } = useParams();
   const router = useRouter();
   const { toast } = useToast();
+  const { user, isUserLoading } = useUser();
   const [salon, setSalon] = useState<Salon | null>(null);
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [date, setDate] = useState<Date>();
@@ -29,9 +31,26 @@ export default function SalonDetail() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, isUserLoading, router]);
+
+  useEffect(() => {
     const found = MOCK_SALONS.find(s => s.id === id);
     if (found) setSalon(found);
   }, [id]);
+
+  if (isUserLoading || !user) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 text-primary animate-spin" />
+          <p className="text-muted-foreground font-medium">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!salon) return <div className="p-10 text-center">Loading...</div>;
 
