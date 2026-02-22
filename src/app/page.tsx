@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { Navbar } from "@/components/navbar";
-import { MOCK_SALONS, Salon } from "@/app/lib/mock-data";
+import { MOCK_SALONS } from "@/app/lib/mock-data";
 import { INDIA_DATA, INDIA_STATES } from "@/app/lib/india-data";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,15 +15,17 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Star, Scissors, Info, Clock, SearchX, Loader2 } from "lucide-react";
+import { MapPin, Star, Scissors, Clock, SearchX, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { useUser } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, query, where } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
+  const db = useFirestore();
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [stateFilter, setStateFilter] = useState("all");
@@ -35,17 +37,33 @@ export default function Home() {
     }
   }, [user, isUserLoading, router]);
 
+  // Fetch real salons from Firestore
+  const salonsQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, "salons"), where("isPaid", "==", true));
+  }, [db]);
+
+  const { data: dbSalons, isLoading: isSalonsLoading } = useCollection(salonsQuery);
+
+  // Combine real and mock for demonstration (optional, or just use dbSalons)
+  const allSalons = useMemo(() => {
+    const real = dbSalons || [];
+    return [...real, ...MOCK_SALONS];
+  }, [dbSalons]);
+
   const cities = useMemo(() => {
     if (stateFilter === "all") return [];
     return INDIA_DATA[stateFilter] || [];
   }, [stateFilter]);
 
-  const filteredSalons = MOCK_SALONS.filter(salon => {
+  const filteredSalons = allSalons.filter(salon => {
     const matchesSearch = salon.name.toLowerCase().includes(search.toLowerCase()) || 
                          salon.city.toLowerCase().includes(search.toLowerCase());
     const matchesState = stateFilter === "all" || salon.state === stateFilter;
     const matchesCity = cityFilter === "all" || salon.city === cityFilter;
-    return matchesSearch && matchesState && matchesCity && salon.isAuthorized && salon.isPaid;
+    // Authorized check is optional for mock data but good for real data
+    const isVisible = salon.isPaid;
+    return matchesSearch && matchesState && matchesCity && isVisible;
   });
 
   const handleStateChange = (val: string) => {
@@ -135,7 +153,9 @@ export default function Home() {
           <div>
             <h2 className="text-3xl font-bold tracking-tight">Available Salons</h2>
             <p className="text-muted-foreground">
-              {filteredSalons.length > 0 
+              {isSalonsLoading ? (
+                "Refreshing listings..."
+              ) : filteredSalons.length > 0 
                 ? `Showing ${filteredSalons.length} professional outlets` 
                 : "No salons matching your criteria"}
             </p>
@@ -151,7 +171,7 @@ export default function Home() {
             <Card key={salon.id} className="group overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
               <div className="relative h-56 w-full">
                 <Image 
-                  src={salon.imageUrl} 
+                  src={salon.imageUrl || "https://picsum.photos/seed/salon/600/400"} 
                   alt={salon.name} 
                   fill 
                   className="object-cover transition-transform group-hover:scale-105"
@@ -175,12 +195,12 @@ export default function Home() {
               </CardHeader>
               <CardContent className="pb-4">
                 <div className="mb-4 flex flex-wrap gap-2">
-                  {salon.services.slice(0, 3).map((s, idx) => (
+                  {salon.services?.slice(0, 3).map((s: any, idx: number) => (
                     <Badge key={idx} variant="secondary" className="bg-muted text-[10px] font-normal">
                       {s.name}
                     </Badge>
                   ))}
-                  {salon.services.length > 3 && (
+                  {salon.services?.length > 3 && (
                     <span className="text-xs text-muted-foreground">+{salon.services.length - 3} more</span>
                   )}
                 </div>
@@ -191,7 +211,9 @@ export default function Home() {
               <CardFooter className="pt-0 border-t bg-muted/20 mt-4 px-6 py-4 flex justify-between items-center">
                  <div className="flex flex-col">
                     <span className="text-xs text-muted-foreground font-medium">Starts from</span>
-                    <span className="text-lg font-bold text-foreground">₹{Math.min(...salon.services.map(s => s.price))}</span>
+                    <span className="text-lg font-bold text-foreground">
+                      ₹{salon.services?.length ? Math.min(...salon.services.map((s: any) => s.price)) : 0}
+                    </span>
                  </div>
                  <Link href={`/salons/${salon.id}`}>
                     <Button className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20">
@@ -202,7 +224,7 @@ export default function Home() {
             </Card>
           ))}
           
-          {filteredSalons.length === 0 && (
+          {(filteredSalons.length === 0 && !isSalonsLoading) && (
             <div className="col-span-full flex flex-col items-center justify-center py-24 text-center">
               <div className="mb-4 rounded-full bg-muted p-6">
                 <SearchX className="h-12 w-12 text-muted-foreground opacity-20" />

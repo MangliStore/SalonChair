@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect } from "react";
@@ -6,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where, orderBy, limit } from "firebase/firestore";
+import { collection, query, where, limit } from "firebase/firestore";
 import { Calendar, Clock, Scissors, AlertCircle, Loader2, ChevronRight } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import Link from "next/link";
@@ -25,15 +26,20 @@ export default function MyBookings() {
 
   const bookingsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
+    // Removed orderBy to prevent composite index requirement crashes
     return query(
       collection(db, "bookings"),
       where("userId", "==", user.uid),
-      orderBy("createdAt", "desc"),
       limit(50)
     );
   }, [db, user?.uid]);
 
-  const { data: bookings, isLoading: isBookingsLoading, error } = useCollection(bookingsQuery);
+  const { data: rawBookings, isLoading: isBookingsLoading, error } = useCollection(rawQuery => rawQuery);
+  const bookings = rawBookings ? [...rawBookings].sort((a, b) => {
+    const dateA = a.createdAt?.seconds || 0;
+    const dateB = b.createdAt?.seconds || 0;
+    return dateB - dateA;
+  }) : [];
 
   if (isUserLoading || !user) {
     return (
@@ -59,7 +65,7 @@ export default function MyBookings() {
               <h3 className="font-bold">Sync Error</h3>
             </div>
             <p className="text-sm opacity-90 leading-relaxed">
-              We encountered a permission error or a missing index. If you just deployed, please check the browser console for a link to create the required Firestore composite index for bookings.
+              We encountered an issue fetching your bookings. If you just deployed, please ensure you've checked the browser console for any Firestore index requirements.
             </p>
           </div>
         )}

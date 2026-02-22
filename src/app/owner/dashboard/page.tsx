@@ -9,14 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription, 
-  DialogFooter 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -25,26 +24,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  Check, 
-  X, 
-  Flag, 
-  AlertCircle, 
-  TrendingUp, 
-  Users, 
-  Calendar, 
-  Scissors, 
-  IndianRupee, 
-  Mail, 
-  ShieldAlert, 
-  Loader2, 
+import {
+  Flag,
+  AlertCircle,
+  Scissors,
+  IndianRupee,
+  ShieldAlert,
+  Loader2,
   Plus,
   Trash2,
   Store
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where, doc, serverTimestamp, orderBy } from "firebase/firestore";
+import { collection, query, where, doc, serverTimestamp } from "firebase/firestore";
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { INDIA_DATA, INDIA_STATES } from "@/app/lib/india-data";
 import Link from "next/link";
@@ -54,7 +47,7 @@ export default function OwnerDashboard() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
-  
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRecharging, setIsRecharging] = useState(false);
@@ -71,14 +64,24 @@ export default function OwnerDashboard() {
   // Fetch bookings for this salon owner
   const bookingsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
+    // Removed orderBy to prevent composite index requirement crashes
     return query(
-      collection(db, "bookings"), 
-      where("salonOwnerId", "==", user.uid),
-      orderBy("createdAt", "desc")
+      collection(db, "bookings"),
+      where("salonOwnerId", "==", user.uid)
     );
   }, [db, user?.uid]);
 
-  const { data: bookings, isLoading: isBookingsLoading, error: bookingsError } = useCollection(bookingsQuery);
+  const { data: rawBookings, isLoading: isBookingsLoading, error: bookingsError } = useCollection(bookingsQuery);
+
+  // Client-side sorting for bookings
+  const bookings = useMemo(() => {
+    if (!rawBookings) return [];
+    return [...rawBookings].sort((a, b) => {
+      const dateA = a.createdAt?.seconds || 0;
+      const dateB = b.createdAt?.seconds || 0;
+      return dateB - dateA;
+    });
+  }, [rawBookings]);
 
   // Form State for Editing Salon
   const [salonForm, setSalonForm] = useState({
@@ -103,7 +106,6 @@ export default function OwnerDashboard() {
         services: mySalon.services || []
       });
     } else {
-      // Reset for new creation
       setSalonForm({
         name: "",
         address: "",
@@ -119,8 +121,7 @@ export default function OwnerDashboard() {
 
   const handleUpdateSalon = async () => {
     if (!user || !db) return;
-    
-    // Basic validation
+
     if (!salonForm.name || !salonForm.city || !salonForm.state) {
       toast({
         variant: "destructive",
@@ -133,7 +134,7 @@ export default function OwnerDashboard() {
     setIsSubmitting(true);
     const salonId = mySalon?.id || `salon_${user.uid}`;
     const salonRef = doc(db, "salons", salonId);
-    
+
     const payload = {
       ...salonForm,
       id: salonId,
@@ -148,8 +149,7 @@ export default function OwnerDashboard() {
     };
 
     setDocumentNonBlocking(salonRef, payload, { merge: true });
-    
-    // Mark user as salon owner
+
     const userRef = doc(db, "users", user.uid);
     updateDocumentNonBlocking(userRef, { isSalonOwner: true });
 
@@ -164,11 +164,11 @@ export default function OwnerDashboard() {
   const handleBookingAction = (bookingId: string, action: 'Accepted' | 'Rejected' | 'NoShow') => {
     if (!db) return;
     const bookingRef = doc(db, "bookings", bookingId);
-    updateDocumentNonBlocking(bookingRef, { 
+    updateDocumentNonBlocking(bookingRef, {
       status: action,
       ownerResponseDateTime: new Date().toISOString()
     });
-    
+
     toast({
       title: `Booking ${action}`,
       description: `Customer has been notified.`,
@@ -178,11 +178,10 @@ export default function OwnerDashboard() {
   const handleRecharge = () => {
     if (!db || !mySalon) return;
     setIsRecharging(true);
-    
-    // Simulate payment delay
+
     setTimeout(() => {
       const salonRef = doc(db, "salons", mySalon.id);
-      updateDocumentNonBlocking(salonRef, { 
+      updateDocumentNonBlocking(salonRef, {
         isPaid: true,
         lastPaymentDate: new Date().toISOString()
       });
@@ -277,22 +276,22 @@ export default function OwnerDashboard() {
         <Navbar />
         <main className="flex-1 flex items-center justify-center p-4">
           <Card className="w-full max-w-md text-center py-8">
-             <CardHeader>
-                <div className="mx-auto w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6">
-                  <Store className="h-10 w-10 text-primary" />
-                </div>
-                <CardTitle className="text-2xl">No Salon Found</CardTitle>
-                <CardDescription>Ready to start your digital journey?</CardDescription>
-             </CardHeader>
-             <CardContent>
-                <Button className="w-full h-12 text-lg" onClick={openEditModal}>
-                  Setup My Shop Now
-                </Button>
-             </CardContent>
+            <CardHeader>
+              <div className="mx-auto w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6">
+                <Store className="h-10 w-10 text-primary" />
+              </div>
+              <CardTitle className="text-2xl">No Salon Found</CardTitle>
+              <CardDescription>Ready to start your digital journey?</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button className="w-full h-12 text-lg" onClick={openEditModal}>
+                Setup My Shop Now
+              </Button>
+            </CardContent>
           </Card>
         </main>
-        <SalonEditDialog 
-          isOpen={isEditModalOpen} 
+        <SalonEditDialog
+          isOpen={isEditModalOpen}
           onOpenChange={setIsEditModalOpen}
           formData={salonForm}
           setFormData={setSalonForm}
@@ -303,8 +302,8 @@ export default function OwnerDashboard() {
     );
   }
 
-  const acceptedBookings = bookings?.filter(b => b.status === 'Accepted') || [];
-  const revenue = acceptedBookings.length * 250;
+  const acceptedBookingsCount = bookings?.filter(b => b.status === 'Accepted').length || 0;
+  const revenue = acceptedBookingsCount * 250;
 
   return (
     <div className="min-h-screen bg-background">
@@ -316,25 +315,25 @@ export default function OwnerDashboard() {
             <p className="text-muted-foreground">{mySalon.city}, {mySalon.state}</p>
           </div>
           <div className="flex gap-3">
-             <Button variant="outline" className="gap-2" onClick={openEditModal}>
-               <Scissors className="h-4 w-4" />
-               Edit Details
-             </Button>
-             <Button 
+            <Button variant="outline" className="gap-2" onClick={openEditModal}>
+              <Scissors className="h-4 w-4" />
+              Edit Details
+            </Button>
+            <Button
               className="bg-primary text-white gap-2 shadow-md"
               onClick={handleRecharge}
               disabled={isRecharging}
-             >
-               {isRecharging ? <Loader2 className="h-4 w-4 animate-spin" /> : <IndianRupee className="h-4 w-4" />}
-               Renew (₹200)
-             </Button>
+            >
+              {isRecharging ? <Loader2 className="h-4 w-4 animate-spin" /> : <IndianRupee className="h-4 w-4" />}
+              Renew (₹200)
+            </Button>
           </div>
         </div>
 
         {bookingsError && (
           <div className="bg-destructive/10 border border-destructive/20 text-destructive p-4 rounded-lg mb-8 text-sm">
             <AlertCircle className="h-4 w-4 inline mr-2" />
-            Permission error or missing index. If you just updated, please check your Firebase console for the composite index link.
+            We encountered a sync issue. If you just deployed, please check your console for index requirements.
           </div>
         )}
 
@@ -414,8 +413,8 @@ export default function OwnerDashboard() {
                 ))
               ) : (
                 <div className="py-20 text-center border-2 border-dashed rounded-xl">
-                   <AlertCircle className="h-10 w-10 text-muted-foreground mx-auto mb-4 opacity-20" />
-                   <h3 className="text-lg font-medium">No pending requests</h3>
+                  <AlertCircle className="h-10 w-10 text-muted-foreground mx-auto mb-4 opacity-20" />
+                  <h3 className="text-lg font-medium">No pending requests</h3>
                 </div>
               )}
             </div>
@@ -423,55 +422,55 @@ export default function OwnerDashboard() {
 
           <TabsContent value="history">
             <Card>
-               <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-muted/50 border-b">
-                        <tr>
-                          <th className="p-4 text-left">Customer</th>
-                          <th className="p-4 text-left">Service</th>
-                          <th className="p-4 text-left">Slot</th>
-                          <th className="p-4 text-left">Status</th>
-                          <th className="p-4 text-left">Actions</th>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50 border-b">
+                      <tr>
+                        <th className="p-4 text-left">Customer</th>
+                        <th className="p-4 text-left">Service</th>
+                        <th className="p-4 text-left">Slot</th>
+                        <th className="p-4 text-left">Status</th>
+                        <th className="p-4 text-left">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {bookings?.filter(b => b.status !== 'Pending').map(booking => (
+                        <tr key={booking.id}>
+                          <td className="p-4">{booking.userName}</td>
+                          <td className="p-4">{booking.serviceName}</td>
+                          <td className="p-4">
+                            {booking.requestedSlotDateTime ? format(parseISO(booking.requestedSlotDateTime), "MMM d, p") : "N/A"}
+                          </td>
+                          <td className="p-4">
+                            <Badge variant={booking.status === 'Accepted' ? 'default' : 'secondary'}>
+                              {booking.status}
+                            </Badge>
+                          </td>
+                          <td className="p-4">
+                            {booking.status === 'Accepted' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive h-8"
+                                onClick={() => handleBookingAction(booking.id, 'NoShow')}
+                              >
+                                <Flag className="h-3.5 w-3.5 mr-1" /> No-Show
+                              </Button>
+                            )}
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {bookings?.filter(b => b.status !== 'Pending').map(booking => (
-                          <tr key={booking.id}>
-                            <td className="p-4">{booking.userName}</td>
-                            <td className="p-4">{booking.serviceName}</td>
-                            <td className="p-4">
-                              {booking.requestedSlotDateTime ? format(parseISO(booking.requestedSlotDateTime), "MMM d, p") : "N/A"}
-                            </td>
-                            <td className="p-4">
-                              <Badge variant={booking.status === 'Accepted' ? 'default' : 'secondary'}>
-                                {booking.status}
-                              </Badge>
-                            </td>
-                            <td className="p-4">
-                               {booking.status === 'Accepted' && (
-                                 <Button 
-                                   variant="ghost" 
-                                   size="sm" 
-                                   className="text-destructive h-8"
-                                   onClick={() => handleBookingAction(booking.id, 'NoShow')}
-                                 >
-                                   <Flag className="h-3.5 w-3.5 mr-1" /> No-Show
-                                 </Button>
-                               )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-               </CardContent>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
 
-        <SalonEditDialog 
-          isOpen={isEditModalOpen} 
+        <SalonEditDialog
+          isOpen={isEditModalOpen}
           onOpenChange={setIsEditModalOpen}
           formData={salonForm}
           setFormData={setSalonForm}
@@ -483,13 +482,13 @@ export default function OwnerDashboard() {
   );
 }
 
-function SalonEditDialog({ 
-  isOpen, 
-  onOpenChange, 
-  formData, 
-  setFormData, 
-  onSave, 
-  isSubmitting 
+function SalonEditDialog({
+  isOpen,
+  onOpenChange,
+  formData,
+  setFormData,
+  onSave,
+  isSubmitting
 }: any) {
   const cities = formData.state ? INDIA_DATA[formData.state] || [] : [];
 
@@ -520,34 +519,34 @@ function SalonEditDialog({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Salon Name</Label>
-              <Input 
-                value={formData.name} 
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
+              <Input
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <Label>Landmark</Label>
-              <Input 
-                value={formData.landmark} 
-                onChange={(e) => setFormData({...formData, landmark: e.target.value})}
+              <Input
+                value={formData.landmark}
+                onChange={(e) => setFormData({ ...formData, landmark: e.target.value })}
               />
             </div>
           </div>
 
           <div className="space-y-2">
             <Label>Address</Label>
-            <Input 
-              value={formData.address} 
-              onChange={(e) => setFormData({...formData, address: e.target.value})}
+            <Input
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>State</Label>
-              <Select 
-                value={formData.state} 
-                onValueChange={(val) => setFormData({...formData, state: val, city: ""})}
+              <Select
+                value={formData.state}
+                onValueChange={(val) => setFormData({ ...formData, state: val, city: "" })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select State" />
@@ -559,9 +558,9 @@ function SalonEditDialog({
             </div>
             <div className="space-y-2">
               <Label>City</Label>
-              <Select 
-                value={formData.city} 
-                onValueChange={(val) => setFormData({...formData, city: val})}
+              <Select
+                value={formData.city}
+                onValueChange={(val) => setFormData({ ...formData, city: val })}
                 disabled={!formData.state}
               >
                 <SelectTrigger>
@@ -586,16 +585,16 @@ function SalonEditDialog({
                 <div key={idx} className="flex gap-3 items-end bg-muted/30 p-3 rounded-lg">
                   <div className="flex-1 space-y-1">
                     <Label className="text-xs">Name</Label>
-                    <Input 
-                      value={s.name} 
+                    <Input
+                      value={s.name}
                       onChange={(e) => updateService(idx, 'name', e.target.value)}
                     />
                   </div>
                   <div className="w-24 space-y-1">
                     <Label className="text-xs">Price (₹)</Label>
-                    <Input 
-                      type="number" 
-                      value={s.price} 
+                    <Input
+                      type="number"
+                      value={s.price}
                       onChange={(e) => updateService(idx, 'price', e.target.value)}
                     />
                   </div>
