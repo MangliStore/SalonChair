@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MOCK_SALONS, MOCK_BOOKINGS, Booking } from "@/app/lib/mock-data";
-import { Check, X, Flag, AlertCircle, TrendingUp, Users, Calendar, Scissors, IndianRupee, Mail, ShieldAlert } from "lucide-react";
+import { Check, X, Flag, AlertCircle, TrendingUp, Users, Calendar, Scissors, IndianRupee, Mail, ShieldAlert, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/firebase";
 import Link from "next/link";
@@ -17,6 +17,8 @@ export default function OwnerDashboard() {
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
   const [bookings, setBookings] = useState<Booking[]>(MOCK_BOOKINGS);
+  const [isRecharging, setIsRecharging] = useState(false);
+  const [daysRemaining, setDaysRemaining] = useState(12);
   const mySalon = MOCK_SALONS[0]; // Simulation for current owner
 
   const handleAction = (id: string, action: 'Accepted' | 'Rejected' | 'NoShow') => {
@@ -31,6 +33,20 @@ export default function OwnerDashboard() {
     toast({
       title: `Booking ${action}`,
       description: messages[action],
+    });
+  };
+
+  const handleRecharge = async () => {
+    setIsRecharging(true);
+    // Simulate UPI/Payment Gateway processing
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    setDaysRemaining(prev => prev + 30);
+    setIsRecharging(false);
+    
+    toast({
+      title: "Subscription Renewed!",
+      description: "Payment of ₹200 successful. Your shop visibility is extended by 30 days.",
     });
   };
 
@@ -60,7 +76,7 @@ export default function OwnerDashboard() {
               <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
                 <Scissors className="h-6 w-6 text-primary" />
               </div>
-              <CardTitle>Salon Owner Portal</CardTitle>
+              <CardTitle>Salon Chair Owner Portal</CardTitle>
               <CardDescription>Please sign in to manage your salon.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -146,8 +162,16 @@ export default function OwnerDashboard() {
                <Scissors className="h-4 w-4" />
                Edit Shop Details
              </Button>
-             <Button className="bg-primary text-white gap-2">
-               <IndianRupee className="h-4 w-4" />
+             <Button 
+              className="bg-primary text-white gap-2"
+              onClick={handleRecharge}
+              disabled={isRecharging}
+             >
+               {isRecharging ? (
+                 <Loader2 className="h-4 w-4 animate-spin" />
+               ) : (
+                 <IndianRupee className="h-4 w-4" />
+               )}
                Pay Subscription (₹200)
              </Button>
           </div>
@@ -192,7 +216,7 @@ export default function OwnerDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">Active</div>
-              <p className="text-xs text-muted-foreground">Expires in 12 days</p>
+              <p className="text-xs text-muted-foreground">Expires in {daysRemaining} days</p>
             </CardContent>
           </Card>
         </div>
@@ -348,12 +372,16 @@ export default function OwnerDashboard() {
               <h3 className="text-lg font-bold text-orange-900">Visibility Maintenance</h3>
               <p className="text-sm text-orange-800">
                 Your shop is currently <strong>Active</strong> and visible to the public. 
-                Next payment of ₹200 is due on <strong>June 15, 2024</strong>. 
-                Keep it active to appear in search results.
+                Keep it active to appear in search results. Next expiry in {daysRemaining} days.
               </p>
            </div>
-           <Button className="bg-accent hover:bg-accent/90 text-white whitespace-nowrap">
-             Recharge Subscription
+           <Button 
+            className="bg-accent hover:bg-accent/90 text-white whitespace-nowrap gap-2"
+            onClick={handleRecharge}
+            disabled={isRecharging}
+           >
+             {isRecharging && <Loader2 className="h-4 w-4 animate-spin" />}
+             {isRecharging ? "Processing..." : "Recharge Subscription"}
            </Button>
         </div>
       </main>
