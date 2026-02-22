@@ -26,22 +26,16 @@ service cloud.firestore {
         allow get, list: if true;
         allow create, update, delete: if isAdmin() || (isSignedIn() && get(/databases/$(database)/documents/salons/$(salonId)).data.ownerId == request.auth.uid);
       }
-
-      match /subscriptions/{subscriptionId} {
-        allow read: if isAdmin() || (isSignedIn() && get(/databases/$(database)/documents/salons/$(salonId)).data.ownerId == request.auth.uid);
-        allow create, update: if isAdmin() || (isSignedIn() && get(/databases/$(database)/documents/salons/$(salonId)).data.ownerId == request.auth.uid);
-      }
     }
 
     match /bookings/{bookingId} {
-      // Allow customers to list their own bookings
+      // Allow customers or owners to list their own bookings
+      // request.query.filters[field] returns an array for '==' operators in rules v2
       allow list: if isSignedIn() && (
-        request.query.filters.userId == request.auth.uid || 
-        request.query.filters.salonOwnerId == request.auth.uid
+        (request.query.filters.keys().hasAll(['userId']) && request.query.filters.userId[0] == request.auth.uid) || 
+        (request.query.filters.keys().hasAll(['salonOwnerId']) && request.query.filters.salonOwnerId[0] == request.auth.uid) ||
+        isAdmin()
       );
-      
-      // Fallback for admins
-      allow list: if isAdmin();
       
       // Single doc access
       allow get: if isSignedIn() && (
