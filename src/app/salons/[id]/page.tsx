@@ -17,8 +17,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format, parse } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useUser, useFirestore } from "@/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
+import { collection, doc, serverTimestamp } from "firebase/firestore";
+import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 export default function SalonDetail() {
   const { id } = useParams();
@@ -26,7 +27,10 @@ export default function SalonDetail() {
   const { toast } = useToast();
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
-  const [salon, setSalon] = useState<Salon | null>(null);
+
+  const salonRef = useMemoFirebase(() => id ? doc(db, "salons", id as string) : null, [db, id]);
+  const { data: liveSalon, isLoading: isSalonLoading } = useDoc(salonRef);
+
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [date, setDate] = useState<Date>();
   const [time, setTime] = useState("");
@@ -38,30 +42,25 @@ export default function SalonDetail() {
     }
   }, [user, isUserLoading, router]);
 
-  useEffect(() => {
-    const found = MOCK_SALONS.find(s => s.id === id);
-    if (found) setSalon(found);
-  }, [id]);
+  // Fallback to mock if live data isn't available yet or document doesn't exist
+  const salon = liveSalon || MOCK_SALONS.find(s => s.id === id);
 
-  if (isUserLoading || !user) {
+  if (isUserLoading || !user || isSalonLoading) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-10 w-10 text-primary animate-spin" />
-          <p className="text-muted-foreground font-medium">Checking authentication...</p>
-        </div>
+        <Loader2 className="h-10 w-10 text-primary animate-spin" />
       </div>
     );
   }
 
-  if (!salon) return <div className="p-10 text-center">Loading...</div>;
+  if (!salon) return <div className="p-10 text-center">Salon not found</div>;
 
   const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedService || !date || !time || !user) {
       toast({
-        title: "Missing Information",
-        description: "Please select a service, date, and time.",
+        title: "Missing Info",
+        description: "Select service, date, and time.",
         variant: "destructive"
       });
       return;
@@ -69,8 +68,6 @@ export default function SalonDetail() {
 
     setIsSubmitting(true);
     try {
-      // Create a date-time string for the requested slot
-      // date is the Date object, time is like "10:00 AM"
       const timeDate = parse(time, "hh:mm a", new Date());
       const finalDateTime = new Date(
         date.getFullYear(),
@@ -82,11 +79,12 @@ export default function SalonDetail() {
 
       const bookingData = {
         userId: user.uid,
-        userName: user.displayName || "Anonymous",
+        userName: user.displayName || user.email || "User",
+        userPhone: user.phoneNumber || "",
         salonId: salon.id,
         salonName: salon.name,
-        salonOwnerId: salon.ownerId,
-        serviceIds: [selectedService], // Simplification: just one for now
+        salonOwnerId: salon.ownerId, // Crucial for security rules & dashboard query
+        serviceIds: [selectedService],
         serviceName: selectedService,
         requestedSlotDateTime: finalDateTime,
         requestInitiatedDateTime: new Date().toISOString(),
@@ -94,19 +92,18 @@ export default function SalonDetail() {
         createdAt: serverTimestamp(),
       };
 
-      await addDoc(collection(db, "bookings"), bookingData);
+      addDocumentNonBlocking(collection(db, "bookings"), bookingData);
 
       toast({
         title: "Booking Requested",
-        description: `Your request for ${selectedService} at ${salon.name} has been sent. Check "My Bookings" for status updates.`,
+        description: `Request sent to ${salon.name}.`,
       });
       router.push("/my-bookings");
     } catch (error: any) {
-      console.error("Booking Error:", error);
       toast({
         variant: "destructive",
-        title: "Booking Failed",
-        description: "Could not submit your request. Please try again.",
+        title: "Error",
+        description: "Could not submit request.",
       });
     } finally {
       setIsSubmitting(false);
@@ -116,61 +113,54 @@ export default function SalonDetail() {
   return (
     <div className="min-h-screen bg-background pb-20">
       <Navbar />
-      
       <main className="container mx-auto px-4 py-8">
-        <Button variant="ghost" onClick={() => router.back()} className="mb-6 -ml-2 gap-2 text-muted-foreground hover:text-primary">
-          <ChevronLeft className="h-4 w-4" />
-          Back to Listings
+        <Button variant="ghost" onClick={() => router.back()} className="mb-6 -ml-2 gap-2">
+          <ChevronLeft className="h-4 w-4" /> Back
         </Button>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-8">
             <div className="relative h-[350px] w-full rounded-2xl overflow-hidden shadow-xl">
               <Image 
-                src={salon.imageUrl} 
+                src={salon.imageUrl || "https://picsum.photos/seed/salon/600/400"} 
                 alt={salon.name} 
                 fill 
                 className="object-cover"
-                data-ai-hint="salon interior"
               />
             </div>
 
             <div className="space-y-6">
               <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-4xl font-bold tracking-tight">{salon.name}</h1>
-                  <Badge className="bg-primary text-white">Verified Shop</Badge>
-                </div>
+                <h1 className="text-4xl font-bold mb-2">{salon.name}</h1>
                 <div className="flex flex-col gap-2 text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-primary" />
                     <span>{salon.address}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Info className="h-4 w-4 text-accent" />
-                    <span className="font-medium text-foreground italic">Landmark: {salon.landmark}</span>
-                  </div>
+                  {salon.landmark && (
+                    <div className="flex items-center gap-2">
+                      <Info className="h-4 w-4 text-accent" />
+                      <span>Landmark: {salon.landmark}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="space-y-4">
-                <h2 className="text-2xl font-bold flex items-center gap-2">
-                  <Scissors className="h-6 w-6 text-primary" />
-                  Service Menu
-                </h2>
+                <h2 className="text-2xl font-bold">Services</h2>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {salon.services.map((service, idx) => (
+                  {salon.services?.map((service: any, idx: number) => (
                     <Card 
                       key={idx} 
                       className={cn(
                         "cursor-pointer transition-all border-2", 
-                        selectedService === service.name ? "border-primary bg-primary/5 shadow-md" : "border-transparent hover:border-muted hover:bg-muted/30"
+                        selectedService === service.name ? "border-primary bg-primary/5" : "border-transparent hover:bg-muted/30"
                       )}
                       onClick={() => setSelectedService(service.name)}
                     >
                       <CardContent className="p-4 flex justify-between items-center">
                         <div className="font-medium">{service.name}</div>
-                        <div className="text-lg font-bold text-primary">₹{service.price}</div>
+                        <div className="font-bold text-primary">₹{service.price}</div>
                       </CardContent>
                     </Card>
                   ))}
@@ -182,49 +172,31 @@ export default function SalonDetail() {
           <div className="lg:col-span-1">
             <Card className="sticky top-24 shadow-2xl border-primary/10">
               <CardHeader className="bg-primary text-white rounded-t-lg">
-                <CardTitle className="text-xl">Request Appointment</CardTitle>
-                <CardDescription className="text-white/80">Choose your preferred slot below</CardDescription>
+                <CardTitle>Book Slot</CardTitle>
+                <CardDescription className="text-white/80">Choose your preferred time</CardDescription>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
                 <form onSubmit={handleBooking} className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Selected Service</Label>
-                    <Input 
-                      value={selectedService || "Select from menu..."} 
-                      disabled 
-                      className="bg-muted font-medium"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Appointment Date</Label>
+                    <Label>Date</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
                           variant={"outline"}
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !date && "text-muted-foreground"
-                          )}
+                          className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {date ? format(date, "PPP") : <span>Pick a date</span>}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={date}
-                          onSelect={setDate}
-                          initialFocus
-                          disabled={(date) => date < new Date()}
-                        />
+                        <Calendar mode="single" selected={date} onSelect={setDate} disabled={(date) => date < new Date()} />
                       </PopoverContent>
                     </Popover>
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Time Slot</Label>
+                    <Label>Time</Label>
                     <div className="grid grid-cols-2 gap-2">
                       {["10:00 AM", "11:30 AM", "01:00 PM", "03:30 PM", "05:00 PM", "06:30 PM"].map(t => (
                         <Button
@@ -232,7 +204,6 @@ export default function SalonDetail() {
                           type="button"
                           variant={time === t ? "default" : "outline"}
                           size="sm"
-                          className={cn("text-xs", time === t && "bg-accent hover:bg-accent/90 border-accent")}
                           onClick={() => setTime(t)}
                         >
                           {t}
@@ -241,32 +212,14 @@ export default function SalonDetail() {
                     </div>
                   </div>
 
-                  <div className="pt-4 space-y-4 border-t">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">Convenience Fee</span>
-                      <span className="font-medium text-green-600">Free</span>
-                    </div>
-                    <div className="flex justify-between items-center text-lg font-bold">
-                      <span>Total (Pay at shop)</span>
-                      <span className="text-primary">₹{selectedService ? salon.services.find(s => s.name === selectedService)?.price : 0}</span>
-                    </div>
-                  </div>
-
                   <Button 
                     type="submit" 
-                    className="w-full h-12 bg-primary hover:bg-primary/90 text-lg shadow-lg shadow-primary/20"
+                    className="w-full h-12 bg-primary shadow-lg"
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? "Requesting..." : "Request Appointment"}
+                    {isSubmitting ? "Requesting..." : "Submit Request"}
                   </Button>
                 </form>
-                
-                <div className="rounded-lg bg-accent/10 p-4 flex gap-3">
-                   <CreditCard className="h-5 w-5 text-accent shrink-0" />
-                   <p className="text-xs text-accent-foreground">
-                     By requesting, you agree to show up on time. No-shows are flagged by shop owners.
-                   </p>
-                </div>
               </CardContent>
             </Card>
           </div>

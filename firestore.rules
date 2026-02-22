@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -34,19 +35,23 @@ service cloud.firestore {
 
     match /bookings/{bookingId} {
       // Allow customers to list their own bookings
-      allow list: if isSignedIn() && request.query.limit <= 100 && (
-        request.auth.uid == resource.data.userId || 
-        request.auth.uid == resource.data.salonOwnerId
+      allow list: if isSignedIn() && (
+        request.query.filters.userId == request.auth.uid || 
+        request.query.filters.salonOwnerId == request.auth.uid
       );
+      
       // Fallback for admins
       allow list: if isAdmin();
+      
       // Single doc access
       allow get: if isSignedIn() && (
         request.auth.uid == resource.data.userId || 
         request.auth.uid == resource.data.salonOwnerId ||
         isAdmin()
       );
+      
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      
       allow update: if isSignedIn() && (
         request.auth.uid == resource.data.userId || 
         request.auth.uid == resource.data.salonOwnerId ||

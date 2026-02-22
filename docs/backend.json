@@ -178,54 +178,68 @@
         },
         "userId": {
           "type": "string",
-          "description": "Reference to the User entity (public user) who initiated the booking request. (Relationship: User 1:N Booking)"
+          "description": "Reference to the User entity (public user) who initiated the booking request."
+        },
+        "userName": {
+          "type": "string",
+          "description": "Denormalized name of the user for display."
+        },
+        "userPhone": {
+          "type": "string",
+          "description": "Denormalized phone number of the user for contact."
         },
         "salonId": {
           "type": "string",
-          "description": "Reference to the Salon entity where the booking is requested. (Relationship: Salon 1:N Booking)"
+          "description": "Reference to the Salon entity where the booking is requested."
+        },
+        "salonName": {
+          "type": "string",
+          "description": "Denormalized name of the salon for display."
+        },
+        "salonOwnerId": {
+          "type": "string",
+          "description": "Denormalized owner ID of the salon for authorization and querying."
         },
         "serviceIds": {
           "type": "array",
-          "description": "An array of references to the Service entities included in this booking. (Relationship: Service N:N Booking)",
-          "items": {
-            "type": "string"
-          }
+          "items": { "type": "string" },
+          "description": "Array of service identifiers."
+        },
+        "serviceName": {
+          "type": "string",
+          "description": "Denormalized primary service name for quick display."
         },
         "requestedSlotDateTime": {
           "type": "string",
-          "description": "The specific date and time slot requested by the user for the appointment.",
+          "description": "The specific date and time slot requested.",
           "format": "date-time"
         },
         "requestInitiatedDateTime": {
           "type": "string",
-          "description": "The date and time when the booking request was initially placed by the user.",
+          "description": "The date and time when the booking request was placed.",
           "format": "date-time"
         },
         "status": {
           "type": "string",
-          "description": "The current status of the booking (e.g., Pending, Accepted, Rejected, Cancelled, Completed, NoShow).",
-          "format": "enum",
-          "items": {
-            "type": "string"
-          }
+          "description": "Current status (Pending, Accepted, Rejected, etc.)."
         },
         "ownerResponseDateTime": {
           "type": "string",
-          "description": "The date and time when the salon owner responded (Accepted/Rejected) to the booking request.",
           "format": "date-time"
         },
-        "rejectionReason": {
-          "type": "string",
-          "description": "An optional explanation provided by the owner if the booking was rejected."
+        "createdAt": {
+          "type": "object",
+          "description": "Firestore server timestamp."
         }
       },
       "required": [
         "id",
         "userId",
+        "userName",
         "salonId",
-        "serviceIds",
+        "salonName",
+        "salonOwnerId",
         "requestedSlotDateTime",
-        "requestInitiatedDateTime",
         "status"
       ]
     },
@@ -382,27 +396,11 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "User profiles, serving as the central identity for both public users and salon owners. The 'isSalonOwner' field indicates their role. This path uses path-based ownership for individual user data.",
+          "description": "User profiles.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier of the user, matching their Firebase Authentication UID."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/admins/{adminId}",
-        "definition": {
-          "entityName": "Admin",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "A dedicated collection for global administrators. The presence of a document at `/admins/{request.auth.uid}` grants administrative privileges. This uses an 'existence over content' approach for role-based access control (DBAC).",
-          "params": [
-            {
-              "name": "adminId",
-              "description": "The unique identifier of the administrator, matching their Firebase Authentication UID."
+              "description": "The unique identifier of the user."
             }
           ]
         }
@@ -414,31 +412,11 @@
           "schema": {
             "$ref": "#/backend/entities/Salon"
           },
-          "description": "Top-level collection for all salons, allowing public discovery and efficient querying by city/state. Includes denormalized 'ownerId' for authorization independence, enabling direct ownership checks without a 'get()' call.",
+          "description": "Top-level collection for all salons.",
           "params": [
             {
               "name": "salonId",
               "description": "The unique identifier for a salon."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/salons/{salonId}/services/{serviceId}",
-        "definition": {
-          "entityName": "Service",
-          "schema": {
-            "$ref": "#/backend/entities/Service"
-          },
-          "description": "Services offered by a specific salon. Nested under the Salon for logical grouping. Includes denormalized 'salonOwnerId' for authorization independence, allowing direct ownership checks for salon owners.",
-          "params": [
-            {
-              "name": "salonId",
-              "description": "The unique identifier of the parent salon."
-            },
-            {
-              "name": "serviceId",
-              "description": "The unique identifier for a service."
             }
           ]
         }
@@ -450,71 +428,11 @@
           "schema": {
             "$ref": "#/backend/entities/Booking"
           },
-          "description": "All booking requests, stored at the top level for flexible querying by both public users and salon owners. Includes denormalized 'userId', 'salonId', and 'salonOwnerId' for authorization independence, supporting QAPs for listing user's bookings and salon's bookings.",
+          "description": "All booking requests.",
           "params": [
             {
               "name": "bookingId",
               "description": "The unique identifier for a booking."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/salons/{salonId}/subscriptions/{subscriptionId}",
-        "definition": {
-          "entityName": "Subscription",
-          "schema": {
-            "$ref": "#/backend/entities/Subscription"
-          },
-          "description": "Subscription details for a specific salon, nested under the Salon. Includes denormalized 'salonOwnerId' for authorization independence, allowing direct ownership checks for rules.",
-          "params": [
-            {
-              "name": "salonId",
-              "description": "The unique identifier of the parent salon."
-            },
-            {
-              "name": "subscriptionId",
-              "description": "The unique identifier for a subscription."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/salons/{salonId}/subscriptions/{subscriptionId}/payments/{paymentId}",
-        "definition": {
-          "entityName": "Payment",
-          "schema": {
-            "$ref": "#/backend/entities/Payment"
-          },
-          "description": "Individual payment transactions for a salon's subscription, nested under Subscription. Includes denormalized 'salonId' and 'salonOwnerId' for authorization independence, simplifying access rules without 'get()' calls.",
-          "params": [
-            {
-              "name": "salonId",
-              "description": "The unique identifier of the parent salon."
-            },
-            {
-              "name": "subscriptionId",
-              "description": "The unique identifier of the parent subscription."
-            },
-            {
-              "name": "paymentId",
-              "description": "The unique identifier for a payment transaction."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/noShowFlags/{noShowFlagId}",
-        "definition": {
-          "entityName": "NoShowFlag",
-          "schema": {
-            "$ref": "#/backend/entities/NoShowFlag"
-          },
-          "description": "Records instances of no-shows, stored at the top level for centralized management and querying. Includes denormalized 'bookingId', 'flaggedBySalonOwnerId', and 'flaggedUserId' for authorization independence, allowing direct checks by owner, user, and admins.",
-          "params": [
-            {
-              "name": "noShowFlagId",
-              "description": "The unique identifier for a no-show flag."
             }
           ]
         }
