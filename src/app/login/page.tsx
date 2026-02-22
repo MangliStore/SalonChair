@@ -29,10 +29,20 @@ export default function LoginPage() {
       // Redirect to the main marketplace after login
       router.push("/");
     } catch (error: any) {
+      console.error("Login Error:", error);
+      
+      let errorMessage = "An unexpected error occurred.";
+      
+      if (error.code === 'auth/unauthorized-domain') {
+        errorMessage = "This domain is not authorized in Firebase. Please add this URL to 'Authorized Domains' in your Firebase Console.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       toast({
         variant: "destructive",
         title: "Sign in failed",
-        description: error.message || "An unexpected error occurred.",
+        description: errorMessage,
       });
     } finally {
       setIsLoading(false);
