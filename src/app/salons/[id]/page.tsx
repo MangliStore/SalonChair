@@ -4,13 +4,12 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Navbar } from "@/components/navbar";
-import { MOCK_SALONS, Salon } from "@/app/lib/mock-data";
+import { MOCK_SALONS } from "@/app/lib/mock-data";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Phone, Info, Calendar as CalendarIcon, Clock, ChevronLeft, CreditCard, Loader2 } from "lucide-react";
+import { MapPin, Info, Calendar as CalendarIcon, ChevronLeft, Loader2 } from "lucide-react";
 import Image from "next/image";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -28,7 +27,7 @@ export default function SalonDetail() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
 
-  const salonRef = useMemoFirebase(() => id ? doc(db, "salons", id as string) : null, [db, id]);
+  const salonRef = useMemoFirebase(() => (id ? doc(db, "salons", id as string) : null), [db, id]);
   const { data: liveSalon, isLoading: isSalonLoading } = useDoc(salonRef);
 
   const [selectedService, setSelectedService] = useState<string | null>(null);
@@ -42,8 +41,7 @@ export default function SalonDetail() {
     }
   }, [user, isUserLoading, router]);
 
-  // Fallback to mock if live data isn't available yet or document doesn't exist
-  const salon = liveSalon || MOCK_SALONS.find(s => s.id === id);
+  const salon = liveSalon || MOCK_SALONS.find((s) => s.id === id);
 
   if (isUserLoading || !user || isSalonLoading) {
     return (
@@ -55,13 +53,37 @@ export default function SalonDetail() {
 
   if (!salon) return <div className="p-10 text-center">Salon not found</div>;
 
-  const handleBooking = async (e: React.FormEvent) => {
+  const handleBooking = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedService || !date || !time || !user) {
+
+    if (!user) {
+      toast({ title: "Sign in required", variant: "destructive" });
+      return;
+    }
+
+    if (!selectedService) {
       toast({
-        title: "Missing Info",
-        description: "Select service, date, and time.",
-        variant: "destructive"
+        title: "Service missing",
+        description: "Please tap on a service card to select it.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!date) {
+      toast({
+        title: "Date missing",
+        description: "Please select an appointment date from the calendar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!time) {
+      toast({
+        title: "Time missing",
+        description: "Please select a time slot.",
+        variant: "destructive",
       });
       return;
     }
@@ -83,7 +105,7 @@ export default function SalonDetail() {
         userPhone: user.phoneNumber || "",
         salonId: salon.id,
         salonName: salon.name,
-        salonOwnerId: salon.ownerId, // Crucial for security rules & dashboard query
+        salonOwnerId: salon.ownerId,
         serviceIds: [selectedService],
         serviceName: selectedService,
         requestedSlotDateTime: finalDateTime,
@@ -96,16 +118,17 @@ export default function SalonDetail() {
 
       toast({
         title: "Booking Requested",
-        description: `Request sent to ${salon.name}.`,
+        description: `Your request has been sent to ${salon.name}.`,
       });
-      router.push("/my-bookings");
+      
+      // Navigate after a short delay to allow the local cache to settle
+      setTimeout(() => router.push("/my-bookings"), 500);
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Could not submit request.",
+        description: "Could not submit request. Please check your selections.",
       });
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -121,10 +144,10 @@ export default function SalonDetail() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-8">
             <div className="relative h-[350px] w-full rounded-2xl overflow-hidden shadow-xl">
-              <Image 
-                src={salon.imageUrl || "https://picsum.photos/seed/salon/600/400"} 
-                alt={salon.name} 
-                fill 
+              <Image
+                src={salon.imageUrl || `https://picsum.photos/seed/${salon.id}/600/400`}
+                alt={salon.name}
+                fill
                 className="object-cover"
               />
             </div>
@@ -148,13 +171,16 @@ export default function SalonDetail() {
 
               <div className="space-y-4">
                 <h2 className="text-2xl font-bold">Services</h2>
+                <p className="text-sm text-muted-foreground">Select a service below to book:</p>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {salon.services?.map((service: any, idx: number) => (
-                    <Card 
-                      key={idx} 
+                    <Card
+                      key={idx}
                       className={cn(
-                        "cursor-pointer transition-all border-2", 
-                        selectedService === service.name ? "border-primary bg-primary/5" : "border-transparent hover:bg-muted/30"
+                        "cursor-pointer transition-all border-2",
+                        selectedService === service.name
+                          ? "border-primary bg-primary/5 ring-1 ring-primary"
+                          : "border-transparent hover:bg-muted/30"
                       )}
                       onClick={() => setSelectedService(service.name)}
                     >
@@ -170,15 +196,15 @@ export default function SalonDetail() {
           </div>
 
           <div className="lg:col-span-1">
-            <Card className="sticky top-24 shadow-2xl border-primary/10">
-              <CardHeader className="bg-primary text-white rounded-t-lg">
+            <Card className="sticky top-24 shadow-2xl border-primary/10 overflow-hidden">
+              <CardHeader className="bg-primary text-white">
                 <CardTitle>Book Slot</CardTitle>
                 <CardDescription className="text-white/80">Choose your preferred time</CardDescription>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
                 <form onSubmit={handleBooking} className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Date</Label>
+                    <Label className="font-bold">1. Select Date</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button
@@ -190,21 +216,27 @@ export default function SalonDetail() {
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
-                        <Calendar mode="single" selected={date} onSelect={setDate} disabled={(date) => date < new Date()} />
+                        <Calendar
+                          mode="single"
+                          selected={date}
+                          onSelect={setDate}
+                          disabled={(date) => date < new Date() || date < new Date(new Date().setHours(0,0,0,0))}
+                        />
                       </PopoverContent>
                     </Popover>
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Time</Label>
+                    <Label className="font-bold">2. Select Time</Label>
                     <div className="grid grid-cols-2 gap-2">
-                      {["10:00 AM", "11:30 AM", "01:00 PM", "03:30 PM", "05:00 PM", "06:30 PM"].map(t => (
+                      {["10:00 AM", "11:30 AM", "01:00 PM", "03:30 PM", "05:00 PM", "06:30 PM"].map((t) => (
                         <Button
                           key={t}
                           type="button"
                           variant={time === t ? "default" : "outline"}
                           size="sm"
                           onClick={() => setTime(t)}
+                          className={cn(time === t ? "bg-primary text-white" : "")}
                         >
                           {t}
                         </Button>
@@ -212,13 +244,22 @@ export default function SalonDetail() {
                     </div>
                   </div>
 
-                  <Button 
-                    type="submit" 
-                    className="w-full h-12 bg-primary shadow-lg"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? "Requesting..." : "Submit Request"}
-                  </Button>
+                  <div className="pt-4 border-t">
+                    <div className="flex justify-between items-center mb-4 text-sm">
+                      <span className="text-muted-foreground">Selected Service:</span>
+                      <span className="font-bold">{selectedService || "None"}</span>
+                    </div>
+                    <Button
+                      type="submit"
+                      className="w-full h-12 bg-primary hover:bg-primary/90 shadow-lg text-lg font-bold"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? "Requesting..." : "Submit Request"}
+                    </Button>
+                    <p className="mt-4 text-[10px] text-center text-muted-foreground leading-tight">
+                      By submitting, you agree to show up on time. Failure to do so may result in a no-show flag.
+                    </p>
+                  </div>
                 </form>
               </CardContent>
             </Card>
