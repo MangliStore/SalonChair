@@ -14,16 +14,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useUser } from "@/firebase";
+import { useUser, useFirestore } from "@/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 export default function SalonDetail() {
   const { id } = useParams();
   const router = useRouter();
   const { toast } = useToast();
   const { user, isUserLoading } = useUser();
+  const db = useFirestore();
   const [salon, setSalon] = useState<Salon | null>(null);
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [date, setDate] = useState<Date>();
@@ -56,7 +58,7 @@ export default function SalonDetail() {
 
   const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedService || !date || !time) {
+    if (!selectedService || !date || !time || !user) {
       toast({
         title: "Missing Information",
         description: "Please select a service, date, and time.",
@@ -66,15 +68,49 @@ export default function SalonDetail() {
     }
 
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    toast({
-      title: "Booking Requested",
-      description: "Wait for the owner to accept. You will receive an SMS shortly.",
-    });
-    setIsSubmitting(false);
-    router.push("/");
+    try {
+      // Create a date-time string for the requested slot
+      // date is the Date object, time is like "10:00 AM"
+      const timeDate = parse(time, "hh:mm a", new Date());
+      const finalDateTime = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
+        timeDate.getHours(),
+        timeDate.getMinutes()
+      ).toISOString();
+
+      const bookingData = {
+        userId: user.uid,
+        userName: user.displayName || "Anonymous",
+        salonId: salon.id,
+        salonName: salon.name,
+        salonOwnerId: salon.ownerId,
+        serviceIds: [selectedService], // Simplification: just one for now
+        serviceName: selectedService,
+        requestedSlotDateTime: finalDateTime,
+        requestInitiatedDateTime: new Date().toISOString(),
+        status: "Pending",
+        createdAt: serverTimestamp(),
+      };
+
+      await addDoc(collection(db, "bookings"), bookingData);
+
+      toast({
+        title: "Booking Requested",
+        description: `Your request for ${selectedService} at ${salon.name} has been sent. Check "My Bookings" for status updates.`,
+      });
+      router.push("/my-bookings");
+    } catch (error: any) {
+      console.error("Booking Error:", error);
+      toast({
+        variant: "destructive",
+        title: "Booking Failed",
+        description: "Could not submit your request. Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -88,7 +124,6 @@ export default function SalonDetail() {
         </Button>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          {/* Left Column: Details */}
           <div className="lg:col-span-2 space-y-8">
             <div className="relative h-[350px] w-full rounded-2xl overflow-hidden shadow-xl">
               <Image 
@@ -96,6 +131,7 @@ export default function SalonDetail() {
                 alt={salon.name} 
                 fill 
                 className="object-cover"
+                data-ai-hint="salon interior"
               />
             </div>
 
@@ -143,7 +179,6 @@ export default function SalonDetail() {
             </div>
           </div>
 
-          {/* Right Column: Booking Widget */}
           <div className="lg:col-span-1">
             <Card className="sticky top-24 shadow-2xl border-primary/10">
               <CardHeader className="bg-primary text-white rounded-t-lg">
@@ -182,6 +217,7 @@ export default function SalonDetail() {
                           selected={date}
                           onSelect={setDate}
                           initialFocus
+                          disabled={(date) => date < new Date()}
                         />
                       </PopoverContent>
                     </Popover>

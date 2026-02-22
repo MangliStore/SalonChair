@@ -5,8 +5,9 @@ import { useState } from "react";
 import { Navbar } from "@/components/navbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/firebase";
+import { useAuth, useFirestore } from "@/firebase";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Scissors, AlertCircle } from "lucide-react";
@@ -14,6 +15,7 @@ import { firebaseConfig } from "@/firebase/config";
 
 export default function LoginPage() {
   const auth = useAuth();
+  const db = useFirestore();
   const { toast } = useToast();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -24,9 +26,29 @@ export default function LoginPage() {
     setAuthError(null);
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Initialize user profile in Firestore if it doesn't exist
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        await setDoc(userRef, {
+          id: user.uid,
+          email: user.email,
+          name: user.displayName || "New User",
+          phoneNumber: user.phoneNumber || "",
+          isSalonOwner: false,
+          noShowFlagsCount: 0,
+          isBanned: false,
+          registrationDateTime: new Date().toISOString(),
+          createdAt: serverTimestamp(),
+        });
+      }
+
       toast({
-        title: "Welcome back!",
+        title: "Welcome to Salon Chair!",
         description: "Successfully signed in with Google.",
       });
       router.push("/");

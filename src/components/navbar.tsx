@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { Scissors, User, Settings, LogOut } from "lucide-react";
+import { Scissors, User, Settings, LogOut, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUser, useAuth } from "@/firebase";
 import { signOut } from "firebase/auth";
@@ -39,6 +39,15 @@ export function Navbar() {
           Salon Chair
         </Link>
         <div className="flex items-center gap-4">
+          {user && (
+            <Link href="/my-bookings">
+              <Button variant="ghost" size="sm" className="hidden sm:flex gap-2">
+                <Calendar className="h-4 w-4" />
+                My Bookings
+              </Button>
+            </Link>
+          )}
+
           <Link href="/owner/dashboard">
             <Button variant="ghost" size="sm" className="hidden sm:flex gap-2">
               <Settings className="h-4 w-4" />
