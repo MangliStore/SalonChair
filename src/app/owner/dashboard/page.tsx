@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where, doc, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, doc, serverTimestamp, limit } from "firebase/firestore";
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { INDIA_DATA, INDIA_STATES } from "@/app/lib/india-data";
 import Link from "next/link";
@@ -55,7 +55,7 @@ export default function OwnerDashboard() {
   // Fetch the user's salon
   const salonsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
-    return query(collection(db, "salons"), where("ownerId", "==", user.uid));
+    return query(collection(db, "salons"), where("ownerId", "==", user.uid), limit(1));
   }, [db, user?.uid]);
 
   const { data: salons, isLoading: isSalonLoading } = useCollection(salonsQuery);
@@ -66,7 +66,8 @@ export default function OwnerDashboard() {
     if (!db || !user) return null;
     return query(
       collection(db, "bookings"),
-      where("salonOwnerId", "==", user.uid)
+      where("salonOwnerId", "==", user.uid),
+      limit(100)
     );
   }, [db, user?.uid]);
 

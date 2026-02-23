@@ -4,7 +4,9 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Global helpers
     function isSignedIn() { return request.auth != null; }
-    function isAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+    function isAdmin() { 
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); 
+    }
 
     match /users/{userId} {
       allow get: if isSignedIn();
@@ -29,27 +31,28 @@ service cloud.firestore {
     }
 
     match /bookings/{bookingId} {
-      // Allow customers or owners to list their own bookings
-      // Use in() for filters to ensure compatibility with query array structure in Rules v2
-      allow list: if isSignedIn() && (
-        (request.query.filters.keys().hasAll(['userId']) && request.auth.uid in request.query.filters.userId) || 
-        (request.query.filters.keys().hasAll(['salonOwnerId']) && request.auth.uid in request.query.filters.salonOwnerId) ||
-        isAdmin()
-      );
-      
-      // Single doc access
+      // Allow reading bookings if user is the customer or the salon owner
+      // 'get' handles individual document access
       allow get: if isSignedIn() && (
-        request.auth.uid == resource.data.userId || 
-        request.auth.uid == resource.data.salonOwnerId ||
-        isAdmin()
+        isAdmin() ||
+        resource.data.userId == request.auth.uid || 
+        resource.data.salonOwnerId == request.auth.uid
+      );
+
+      // 'list' handles collection-level queries with filters
+      allow list: if isSignedIn() && (
+        isAdmin() ||
+        (request.query.filters.get('userId', []) == [request.auth.uid]) ||
+        (request.query.filters.get('salonOwnerId', []) == [request.auth.uid])
       );
       
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && 
+        request.resource.data.userId == request.auth.uid;
       
       allow update: if isSignedIn() && (
-        request.auth.uid == resource.data.userId || 
-        request.auth.uid == resource.data.salonOwnerId ||
-        isAdmin()
+        isAdmin() ||
+        resource.data.userId == request.auth.uid || 
+        resource.data.salonOwnerId == request.auth.uid
       );
     }
   }
