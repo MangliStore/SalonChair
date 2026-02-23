@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -51,7 +50,7 @@ export function Navbar() {
           <Link href="/owner/dashboard">
             <Button variant="ghost" size="sm" className="hidden sm:flex gap-2">
               <Settings className="h-4 w-4" />
-              Salon Dashboard
+              Salon Owner
             </Button>
           </Link>
           
