@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -22,7 +21,6 @@ import { Badge } from "@/components/ui/badge";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 import { useRouter } from "next/navigation";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -71,9 +69,6 @@ export default function Home() {
     setCityFilter("all");
   };
 
-  const heroImage = PlaceHolderImages.find(img => img.id === 'salon-hero') || PlaceHolderImages[0];
-  const cardPlaceholder = PlaceHolderImages.find(img => img.id === 'salon-1') || PlaceHolderImages[0];
-
   if (isUserLoading || !user) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center">
@@ -93,11 +88,11 @@ export default function Home() {
       <section className="relative h-[500px] w-full overflow-hidden flex items-center justify-center bg-primary/5">
         <div className="absolute inset-0 z-0">
           <Image 
-            src={heroImage.imageUrl} 
-            alt={heroImage.description} 
+            src="https://picsum.photos/seed/salonhero/1200/600" 
+            alt="Salon Hero" 
             fill 
             className="object-cover opacity-20"
-            data-ai-hint={heroImage.imageHint}
+            data-ai-hint="luxury salon"
           />
         </div>
         <div className="container relative z-10 px-4 text-center">
@@ -174,11 +169,11 @@ export default function Home() {
             <Card key={salon.id} className="group overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
               <div className="relative h-56 w-full">
                 <Image 
-                  src={salon.imageUrl || cardPlaceholder.imageUrl} 
+                  src={salon.imageUrl || "https://picsum.photos/seed/salon1/600/400"} 
                   alt={salon.name} 
                   fill 
                   className="object-cover transition-transform group-hover:scale-105"
-                  data-ai-hint={cardPlaceholder.imageHint}
+                  data-ai-hint="hair salon"
                 />
                 <Badge className="absolute left-4 top-4 bg-primary text-white hover:bg-primary shadow-lg">
                   Verified
