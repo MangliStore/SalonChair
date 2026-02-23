@@ -12,33 +12,18 @@ If you see a "Sign in failed" error on your live Vercel site:
 5. **Note:** Do NOT include `https://`, just the domain name.
 6. Also add any Vercel preview URLs if you want them to work.
 
+## Troubleshooting Git Push Errors
+If you see `! [rejected] main -> main (fetch first)`, it means there are changes on GitHub that you don't have locally. Run these commands in your terminal:
+```bash
+git pull origin main --rebase
+git push -u origin main
+```
+
 ## Features
 - **Public Marketplace**: Search and browse local salons by state and city.
 - **Booking System**: Request appointments with specific services and time slots.
 - **Owner Dashboard**: Manage shop details, accept/reject bookings, and track revenue.
 - **Security**: Mandatory sign-in and strict Gmail verification for salon owners.
-
-## Deployment to Vercel
-
-### 1. Create a GitHub Repository
-1. Go to [GitHub](https://github.com) and create a new repository named `salon-chair`.
-
-### 2. Push Code to GitHub
-Open your terminal in your local project folder and run:
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/salon-chair.git
-git push -u origin main
-```
-
-### 3. Connect to Vercel
-1. Log in to [Vercel](https://vercel.com).
-2. Click **"Add New"** -> **"Project"**.
-3. Select your `salon-chair` repository.
-4. Click **"Deploy"**.
 
 ## Tech Stack
 - **Next.js 15 (App Router)**
