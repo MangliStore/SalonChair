@@ -95,17 +95,17 @@
           "description": "The date and time when the salon formally registered on the platform.",
           "format": "date-time"
         },
-        "verificationStatus": {
-          "type": "string",
-          "description": "The current verification status of the salon by an administrator (e.g., Pending, Approved, Rejected).",
-          "format": "enum",
-          "items": {
-            "type": "string"
-          }
+        "isAuthorized": {
+          "type": "boolean",
+          "description": "Whether the salon is verified by admin."
         },
         "isVisible": {
           "type": "boolean",
           "description": "A boolean flag indicating if the salon is publicly visible and available for bookings, controlled by subscription status and admin overrides."
+        },
+        "isPaid": {
+          "type": "boolean",
+          "description": "Whether the salon owner has an active subscription."
         },
         "subscriptionId": {
           "type": "string",
@@ -125,7 +125,6 @@
         "city",
         "state",
         "registrationDateTime",
-        "verificationStatus",
         "isVisible",
         "subscriptionId"
       ]

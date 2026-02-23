@@ -4,6 +4,8 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Global helpers
     function isSignedIn() { return request.auth != null; }
+    
+    // Check if the user is an admin by checking the 'admins' collection
     function isAdmin() { 
       return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); 
     }
@@ -21,10 +23,11 @@ service cloud.firestore {
 
     match /salons/{salonId} {
       allow read: if true;
-      // Allow write (create, update, delete) if user is owner or admin.
-      // For create/update, ensures the ownerId matches the requester.
+      // Allow write if user is owner or admin.
+      // We check the document ID pattern 'salon_{uid}' as a robust fallback for ownership.
       allow write: if isSignedIn() && (
         isAdmin() || 
+        salonId == 'salon_' + request.auth.uid ||
         (request.resource.data.ownerId == request.auth.uid && (resource == null || resource.data.ownerId == request.auth.uid))
       );
 
@@ -35,8 +38,8 @@ service cloud.firestore {
     }
 
     match /bookings/{bookingId} {
-      // Allow reading bookings if user is the customer or the salon owner
-      // Use resource.data check which is compatible with filtered queries in MyBookings and OwnerDashboard
+      // Allow reading bookings if user is the customer or the salon owner.
+      // Optimized for collection queries by checking if the UID is in the required fields.
       allow read: if isSignedIn() && (
         isAdmin() ||
         resource.data.userId == request.auth.uid || 
