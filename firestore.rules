@@ -20,30 +20,27 @@ service cloud.firestore {
     }
 
     match /salons/{salonId} {
-      allow get, list: if true;
-      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow update, delete: if isAdmin() || (isSignedIn() && resource.data.ownerId == request.auth.uid);
+      allow read: if true;
+      // Allow write (create, update, delete) if user is owner or admin.
+      // For create/update, ensures the ownerId matches the requester.
+      allow write: if isSignedIn() && (
+        isAdmin() || 
+        (request.resource.data.ownerId == request.auth.uid && (resource == null || resource.data.ownerId == request.auth.uid))
+      );
 
       match /services/{serviceId} {
-        allow get, list: if true;
-        allow create, update, delete: if isAdmin() || (isSignedIn() && get(/databases/$(database)/documents/salons/$(salonId)).data.ownerId == request.auth.uid);
+        allow read: if true;
+        allow write: if isAdmin() || (isSignedIn() && get(/databases/$(database)/documents/salons/$(salonId)).data.ownerId == request.auth.uid);
       }
     }
 
     match /bookings/{bookingId} {
       // Allow reading bookings if user is the customer or the salon owner
-      // 'get' handles individual document access
-      allow get: if isSignedIn() && (
+      // Use resource.data check which is compatible with filtered queries in MyBookings and OwnerDashboard
+      allow read: if isSignedIn() && (
         isAdmin() ||
         resource.data.userId == request.auth.uid || 
         resource.data.salonOwnerId == request.auth.uid
-      );
-
-      // 'list' handles collection-level queries with filters
-      allow list: if isSignedIn() && (
-        isAdmin() ||
-        (request.query.filters.get('userId', []) == [request.auth.uid]) ||
-        (request.query.filters.get('salonOwnerId', []) == [request.auth.uid])
       );
       
       allow create: if isSignedIn() && 
@@ -54,6 +51,8 @@ service cloud.firestore {
         resource.data.userId == request.auth.uid || 
         resource.data.salonOwnerId == request.auth.uid
       );
+
+      allow delete: if isAdmin();
     }
   }
 }

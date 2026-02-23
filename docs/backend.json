@@ -110,6 +110,10 @@
         "subscriptionId": {
           "type": "string",
           "description": "Reference to the active Subscription entity for this salon. (Relationship: Salon 1:1 Subscription)"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL to the salon's cover image."
         }
       },
       "required": [
@@ -241,142 +245,6 @@
         "salonOwnerId",
         "requestedSlotDateTime",
         "status"
-      ]
-    },
-    "Subscription": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Subscription",
-      "type": "object",
-      "description": "Manages the monthly subscription status and billing cycle details for a Salon, determining its visibility.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Subscription entity."
-        },
-        "salonId": {
-          "type": "string",
-          "description": "Reference to the Salon entity associated with this subscription. (Relationship: Salon 1:1 Subscription)"
-        },
-        "startDate": {
-          "type": "string",
-          "description": "The date and time when the current subscription period began.",
-          "format": "date-time"
-        },
-        "endDate": {
-          "type": "string",
-          "description": "The anticipated end date and time of the current billing cycle. Null if active and ongoing without a fixed end.",
-          "format": "date-time"
-        },
-        "status": {
-          "type": "string",
-          "description": "The current operational status of the subscription (e.g., Active, Hidden, Trial, Cancelled). 'Hidden' implies non-payment.",
-          "format": "enum",
-          "items": {
-            "type": "string"
-          }
-        },
-        "lastPaymentDateTime": {
-          "type": "string",
-          "description": "The date and time of the most recent successful payment for this subscription.",
-          "format": "date-time"
-        },
-        "nextPaymentDueDate": {
-          "type": "string",
-          "description": "The date and time when the next subscription payment is expected.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "salonId",
-        "startDate",
-        "status",
-        "nextPaymentDueDate"
-      ]
-    },
-    "Payment": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Payment",
-      "type": "object",
-      "description": "Records individual payment transactions made by a salon owner for their subscription, including amount, date, and transaction status.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Payment entity."
-        },
-        "subscriptionId": {
-          "type": "string",
-          "description": "Reference to the Subscription entity this payment is associated with. (Relationship: Subscription 1:N Payment)"
-        },
-        "amount": {
-          "type": "number",
-          "description": "The monetary amount of the payment."
-        },
-        "paymentDateTime": {
-          "type": "string",
-          "description": "The date and time when the payment was successfully processed.",
-          "format": "date-time"
-        },
-        "transactionId": {
-          "type": "string",
-          "description": "The unique transaction identifier provided by the payment gateway."
-        },
-        "status": {
-          "type": "string",
-          "description": "The status of the payment transaction (e.g., Success, Failed, Pending).",
-          "format": "enum",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "required": [
-        "id",
-        "subscriptionId",
-        "amount",
-        "paymentDateTime",
-        "transactionId",
-        "status"
-      ]
-    },
-    "NoShowFlag": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "NoShowFlag",
-      "type": "object",
-      "description": "Records an instance where a public user failed to show up for a confirmed booking, as reported by a salon owner.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the NoShowFlag entity."
-        },
-        "bookingId": {
-          "type": "string",
-          "description": "Reference to the Booking entity that was a no-show. (Relationship: Booking 1:1 NoShowFlag)"
-        },
-        "flaggedBySalonOwnerId": {
-          "type": "string",
-          "description": "Reference to the User entity (salon owner) who flagged the no-show. (Relationship: User 1:N NoShowFlag)"
-        },
-        "flaggedUserId": {
-          "type": "string",
-          "description": "Reference to the User entity (public user) who failed to show up for the appointment. (Relationship: User 1:N NoShowFlag)"
-        },
-        "flagDateTime": {
-          "type": "string",
-          "description": "The date and time when the no-show was officially flagged by the salon owner.",
-          "format": "date-time"
-        },
-        "reason": {
-          "type": "string",
-          "description": "An optional reason or comment provided by the salon owner for flagging the no-show."
-        }
-      },
-      "required": [
-        "id",
-        "bookingId",
-        "flaggedBySalonOwnerId",
-        "flaggedUserId",
-        "flagDateTime"
       ]
     }
   },
