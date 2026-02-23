@@ -23,8 +23,7 @@ service cloud.firestore {
 
     match /salons/{salonId} {
       allow read: if true;
-      // Allow write if user is owner or admin.
-      // We check the document ID pattern 'salon_{uid}' as a robust fallback for ownership.
+      // Reverting to base ownership rule
       allow write: if isSignedIn() && (
         isAdmin() || 
         salonId == 'salon_' + request.auth.uid ||
@@ -38,8 +37,7 @@ service cloud.firestore {
     }
 
     match /bookings/{bookingId} {
-      // Allow reading bookings if user is the customer or the salon owner.
-      // Optimized for collection queries by checking if the UID is in the required fields.
+      // Base check for single-doc reads. List queries often fail here in production.
       allow read: if isSignedIn() && (
         isAdmin() ||
         resource.data.userId == request.auth.uid || 

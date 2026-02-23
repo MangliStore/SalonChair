@@ -110,10 +110,6 @@
         "subscriptionId": {
           "type": "string",
           "description": "Reference to the active Subscription entity for this salon. (Relationship: Salon 1:1 Subscription)"
-        },
-        "imageUrl": {
-          "type": "string",
-          "description": "URL to the salon's cover image."
         }
       },
       "required": [
