@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -21,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 import { useRouter } from "next/navigation";
+import placeholderData from "@/app/lib/placeholder-images.json";
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -69,6 +71,10 @@ export default function Home() {
     setCityFilter("all");
   };
 
+  const heroImage = useMemo(() => {
+    return placeholderData.placeholderImages.find(img => img.id === "salon-hero")?.imageUrl || "https://picsum.photos/seed/salonhero/1200/600";
+  }, []);
+
   if (isUserLoading || !user) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center">
@@ -88,22 +94,23 @@ export default function Home() {
       <section className="relative h-[500px] w-full overflow-hidden flex items-center justify-center bg-primary/5">
         <div className="absolute inset-0 z-0">
           <Image 
-            src="https://picsum.photos/seed/salonhero/1200/600" 
+            src={heroImage} 
             alt="Salon Hero" 
             fill 
-            className="object-cover opacity-20"
+            className="object-cover opacity-30"
+            priority
             data-ai-hint="luxury salon"
           />
         </div>
         <div className="container relative z-10 px-4 text-center">
-          <h1 className="mb-6 font-headline text-4xl font-bold tracking-tight text-foreground sm:text-6xl">
+          <h1 className="mb-6 font-headline text-4xl font-bold tracking-tight text-foreground sm:text-6xl drop-shadow-sm">
             Find Your Perfect Style
           </h1>
-          <p className="mx-auto mb-10 max-w-2xl text-lg text-muted-foreground">
+          <p className="mx-auto mb-10 max-w-2xl text-lg text-muted-foreground font-medium bg-background/40 backdrop-blur-sm rounded-lg p-2 inline-block">
             Discover top-rated salons across India, view service menus, and book appointments instantly.
           </p>
           
-          <div className="mx-auto flex max-w-5xl flex-col gap-4 rounded-xl bg-card p-4 shadow-2xl sm:flex-row items-center">
+          <div className="mx-auto flex max-w-5xl flex-col gap-4 rounded-xl bg-card p-4 shadow-2xl sm:flex-row items-center border border-primary/10">
             <div className="w-full sm:flex-1">
               <Input 
                 placeholder="Search salon names..." 
@@ -137,7 +144,7 @@ export default function Home() {
                 </SelectContent>
               </Select>
               
-              <Button className="h-12 px-8 bg-primary hover:bg-primary/90">
+              <Button className="h-12 px-8 bg-primary hover:bg-primary/90 text-white font-bold">
                 Search
               </Button>
             </div>
