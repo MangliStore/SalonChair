@@ -2,6 +2,12 @@
 {
   "placeholderImages": [
     {
+      "id": "salon-hero",
+      "description": "Luxurious modern salon interior with styling chairs",
+      "imageUrl": "https://picsum.photos/seed/salonhero/1200/600",
+      "imageHint": "luxury salon"
+    },
+    {
       "id": "salon-1",
       "description": "Modern hair salon interior",
       "imageUrl": "https://picsum.photos/seed/salon1/600/400",

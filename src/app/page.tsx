@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 import { useRouter } from "next/navigation";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -45,7 +46,7 @@ export default function Home() {
 
   const { data: dbSalons, isLoading: isSalonsLoading } = useCollection(salonsQuery);
 
-  // Combine real and mock for demonstration (optional, or just use dbSalons)
+  // Combine real and mock for demonstration
   const allSalons = useMemo(() => {
     const real = dbSalons || [];
     return [...real, ...MOCK_SALONS];
@@ -61,7 +62,6 @@ export default function Home() {
                          salon.city.toLowerCase().includes(search.toLowerCase());
     const matchesState = stateFilter === "all" || salon.state === stateFilter;
     const matchesCity = cityFilter === "all" || salon.city === cityFilter;
-    // Authorized check is optional for mock data but good for real data
     const isVisible = salon.isPaid;
     return matchesSearch && matchesState && matchesCity && isVisible;
   });
@@ -70,6 +70,9 @@ export default function Home() {
     setStateFilter(val);
     setCityFilter("all");
   };
+
+  const heroImage = PlaceHolderImages.find(img => img.id === 'salon-hero') || PlaceHolderImages[0];
+  const cardPlaceholder = PlaceHolderImages.find(img => img.id === 'salon-1') || PlaceHolderImages[0];
 
   if (isUserLoading || !user) {
     return (
@@ -90,11 +93,11 @@ export default function Home() {
       <section className="relative h-[500px] w-full overflow-hidden flex items-center justify-center bg-primary/5">
         <div className="absolute inset-0 z-0">
           <Image 
-            src="https://picsum.photos/seed/hero/1200/600" 
-            alt="Salon Hero" 
+            src={heroImage.imageUrl} 
+            alt={heroImage.description} 
             fill 
             className="object-cover opacity-20"
-            data-ai-hint="luxury salon"
+            data-ai-hint={heroImage.imageHint}
           />
         </div>
         <div className="container relative z-10 px-4 text-center">
@@ -171,11 +174,11 @@ export default function Home() {
             <Card key={salon.id} className="group overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
               <div className="relative h-56 w-full">
                 <Image 
-                  src={salon.imageUrl || "https://picsum.photos/seed/salon/600/400"} 
+                  src={salon.imageUrl || cardPlaceholder.imageUrl} 
                   alt={salon.name} 
                   fill 
                   className="object-cover transition-transform group-hover:scale-105"
-                  data-ai-hint="salon front"
+                  data-ai-hint={cardPlaceholder.imageHint}
                 />
                 <Badge className="absolute left-4 top-4 bg-primary text-white hover:bg-primary shadow-lg">
                   Verified
