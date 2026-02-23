@@ -30,10 +30,10 @@ service cloud.firestore {
 
     match /bookings/{bookingId} {
       // Allow customers or owners to list their own bookings
-      // request.query.filters[field] returns an array for '==' operators in rules v2
+      // Use in() for filters to ensure compatibility with query array structure in Rules v2
       allow list: if isSignedIn() && (
-        (request.query.filters.keys().hasAll(['userId']) && request.query.filters.userId[0] == request.auth.uid) || 
-        (request.query.filters.keys().hasAll(['salonOwnerId']) && request.query.filters.salonOwnerId[0] == request.auth.uid) ||
+        (request.query.filters.keys().hasAll(['userId']) && request.auth.uid in request.query.filters.userId) || 
+        (request.query.filters.keys().hasAll(['salonOwnerId']) && request.auth.uid in request.query.filters.salonOwnerId) ||
         isAdmin()
       );
       

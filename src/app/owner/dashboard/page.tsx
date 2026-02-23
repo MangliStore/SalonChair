@@ -203,7 +203,7 @@ export default function OwnerDashboard() {
       return (
         <div className="flex-1 flex flex-col items-center justify-center gap-4">
           <Loader2 className="h-10 w-10 text-primary animate-spin" />
-          <p className="text-foreground/80 font-medium">Loading Dashboard...</p>
+          <p className="text-foreground font-medium">Loading Dashboard...</p>
         </div>
       );
     }
@@ -326,7 +326,6 @@ export default function OwnerDashboard() {
           </div>
         )}
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Card className="bg-card border-border/50">
             <CardHeader className="pb-2">
@@ -378,7 +377,7 @@ export default function OwnerDashboard() {
                 bookings.filter(b => b.status === 'Pending').map(booking => (
                   <Card key={booking.id} className="overflow-hidden border-l-4 border-l-primary bg-card hover:bg-muted/20 transition-colors">
                     <div className="flex flex-col md:flex-row p-6 items-center justify-between gap-6">
-                      <div className="space-y-1 w-full md:w-auto">
+                      <div className="space-y-1 w-full md:w-auto text-left">
                         <h3 className="text-xl font-extrabold text-foreground">{booking.userName}</h3>
                         <p className="text-sm font-medium text-foreground/70">{booking.userPhone}</p>
                         <Badge variant="secondary" className="mt-2 bg-muted text-foreground border-border/50">{booking.serviceName}</Badge>
@@ -494,21 +493,21 @@ function SalonEditDialog({
     setFormData({ ...formData, services: [...formData.services, { name: "", price: 0 }] });
   };
 
-  const removeService = (index: number) => {
+  const removeService = (idx: number) => {
     const updated = [...formData.services];
-    updated.splice(index, 1);
+    updated.splice(idx, 1);
     setFormData({ ...formData, services: updated });
   };
 
-  const updateService = (index: number, field: string, value: any) => {
+  const updateService = (idx: number, field: string, value: any) => {
     const updated = [...formData.services];
-    updated[index] = { ...updated[index], [field]: field === 'price' ? Number(value) : value };
+    updated[idx] = { ...updated[idx], [field]: field === 'price' ? Number(value) : value };
     setFormData({ ...formData, services: updated });
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto dark bg-card text-foreground border-border/50">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto dark bg-background text-foreground border-border/50">
         <DialogHeader>
           <DialogTitle className="text-2xl font-extrabold text-foreground">Shop Profile</DialogTitle>
           <DialogDescription className="text-foreground/70">Setup your business details for the marketplace.</DialogDescription>
@@ -516,17 +515,17 @@ function SalonEditDialog({
         <div className="space-y-6 py-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="font-bold text-foreground">Salon Name</Label>
+              <Label className="font-bold text-foreground/90">Salon Name</Label>
               <Input
-                className="bg-muted/30 border-border/50 text-foreground focus:border-primary"
+                className="bg-muted/10 border-border/50 text-foreground focus:border-primary"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
             </div>
             <div className="space-y-2">
-              <Label className="font-bold text-foreground">Landmark</Label>
+              <Label className="font-bold text-foreground/90">Landmark</Label>
               <Input
-                className="bg-muted/30 border-border/50 text-foreground focus:border-primary"
+                className="bg-muted/10 border-border/50 text-foreground focus:border-primary"
                 value={formData.landmark}
                 onChange={(e) => setFormData({ ...formData, landmark: e.target.value })}
               />
@@ -534,9 +533,9 @@ function SalonEditDialog({
           </div>
 
           <div className="space-y-2">
-            <Label className="font-bold text-foreground">Address</Label>
+            <Label className="font-bold text-foreground/90">Address</Label>
             <Input
-              className="bg-muted/30 border-border/50 text-foreground focus:border-primary"
+              className="bg-muted/10 border-border/50 text-foreground focus:border-primary"
               value={formData.address}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
             />
@@ -544,12 +543,12 @@ function SalonEditDialog({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="font-bold text-foreground">State</Label>
+              <Label className="font-bold text-foreground/90">State</Label>
               <Select
                 value={formData.state}
                 onValueChange={(val) => setFormData({ ...formData, state: val, city: "" })}
               >
-                <SelectTrigger className="bg-muted/30 border-border/50 text-foreground">
+                <SelectTrigger className="bg-muted/10 border-border/50 text-foreground">
                   <SelectValue placeholder="Select State" />
                 </SelectTrigger>
                 <SelectContent className="dark bg-card text-foreground border-border/50">
@@ -558,13 +557,13 @@ function SalonEditDialog({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="font-bold text-foreground">City</Label>
+              <Label className="font-bold text-foreground/90">City</Label>
               <Select
                 value={formData.city}
                 onValueChange={(val) => setFormData({ ...formData, city: val })}
                 disabled={!formData.state}
               >
-                <SelectTrigger className="bg-muted/30 border-border/50 text-foreground">
+                <SelectTrigger className="bg-muted/10 border-border/50 text-foreground">
                   <SelectValue placeholder="Select City" />
                 </SelectTrigger>
                 <SelectContent className="dark bg-card text-foreground border-border/50">
@@ -583,9 +582,9 @@ function SalonEditDialog({
             </div>
             <div className="space-y-3">
               {formData.services.map((s: any, idx: number) => (
-                <div key={idx} className="flex gap-3 items-end bg-muted/40 p-4 rounded-xl border border-border/30">
+                <div key={idx} className="flex gap-3 items-end bg-muted/5 p-4 rounded-xl border border-border/30">
                   <div className="flex-1 space-y-1">
-                    <Label className="text-[10px] font-bold uppercase tracking-widest text-foreground/50">Service Name</Label>
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-foreground/60">Service Name</Label>
                     <Input
                       className="bg-background border-border/50 text-foreground h-9"
                       value={s.name}
@@ -594,7 +593,7 @@ function SalonEditDialog({
                     />
                   </div>
                   <div className="w-24 space-y-1">
-                    <Label className="text-[10px] font-bold uppercase tracking-widest text-foreground/50">Price (₹)</Label>
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-foreground/60">Price (₹)</Label>
                     <Input
                       type="number"
                       className="bg-background border-border/50 text-foreground h-9"
@@ -602,7 +601,7 @@ function SalonEditDialog({
                       onChange={(e) => updateService(idx, 'price', e.target.value)}
                     />
                   </div>
-                  <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-9 w-9" onClick={() => removeService(index: idx)}>
+                  <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 h-9 w-9" onClick={() => removeService(idx)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
