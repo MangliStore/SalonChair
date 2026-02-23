@@ -1,39 +1,34 @@
-
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useMemo, useEffect } from "react";
 import { Navbar } from "@/components/navbar";
 import { MOCK_SALONS } from "@/app/lib/mock-data";
+import { INDIA_DATA, INDIA_STATES } from "@/app/lib/india-data";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { MapPin, Info, Calendar as CalendarIcon, ChevronLeft, Loader2, Check } from "lucide-react";
+import { MapPin, Star, Scissors, Clock, SearchX, Loader2 } from "lucide-react";
 import Image from "next/image";
-import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, parse } from "date-fns";
-import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
-import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
-import { collection, doc, serverTimestamp } from "firebase/firestore";
-import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, query, where } from "firebase/firestore";
+import { useRouter } from "next/navigation";
 
-export default function SalonDetail() {
-  const { id } = useParams();
-  const router = useRouter();
-  const { toast } = useToast();
+export default function Home() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
-
-  const salonRef = useMemoFirebase(() => (id ? doc(db, "salons", id as string) : null), [db, id]);
-  const { data: liveSalon, isLoading: isSalonLoading } = useDoc(salonRef);
-
-  const [selectedService, setSelectedService] = useState<string | null>(null);
-  const [date, setDate] = useState<Date>();
-  const [time, setTime] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
+  const [search, setSearch] = useState("");
+  const [stateFilter, setStateFilter] = useState("all");
+  const [cityFilter, setCityFilter] = useState("all");
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -41,287 +36,186 @@ export default function SalonDetail() {
     }
   }, [user, isUserLoading, router]);
 
-  const salon = liveSalon || MOCK_SALONS.find((s) => s.id === id);
+  const salonsQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, "salons"), where("isPaid", "==", true));
+  }, [db]);
 
-  if (isUserLoading || !user || isSalonLoading) {
+  const { data: dbSalons, isLoading: isSalonsLoading } = useCollection(salonsQuery);
+
+  const allSalons = useMemo(() => {
+    const real = dbSalons || [];
+    return [...real, ...MOCK_SALONS];
+  }, [dbSalons]);
+
+  const cities = useMemo(() => {
+    if (stateFilter === "all") return [];
+    return INDIA_DATA[stateFilter] || [];
+  }, [stateFilter]);
+
+  const filteredSalons = allSalons.filter(salon => {
+    const matchesSearch = salon.name.toLowerCase().includes(search.toLowerCase()) || 
+                         salon.city.toLowerCase().includes(search.toLowerCase());
+    const matchesState = stateFilter === "all" || salon.state === stateFilter;
+    const matchesCity = cityFilter === "all" || salon.city === cityFilter;
+    const isVisible = salon.isPaid;
+    return matchesSearch && matchesState && matchesCity && isVisible;
+  });
+
+  const handleStateChange = (val: string) => {
+    setStateFilter(val);
+    setCityFilter("all");
+  };
+
+  if (isUserLoading || !user) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center">
-        <Loader2 className="h-10 w-10 text-primary animate-spin" />
-        <p className="mt-4 text-muted-foreground font-medium">Loading salon details...</p>
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 text-primary animate-spin" />
+          <p className="text-muted-foreground font-medium">Verifying access...</p>
+        </div>
       </div>
     );
   }
 
-  if (!salon) return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Navbar />
-      <div className="flex-1 flex items-center justify-center p-10 text-center">
-        <div>
-          <h1 className="text-2xl font-bold mb-2">Salon not found</h1>
-          <Button variant="outline" onClick={() => router.push("/")}>Return Home</Button>
-        </div>
-      </div>
-    </div>
-  );
-
-  const handleBooking = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!user) {
-      toast({ title: "Sign in required", variant: "destructive" });
-      return;
-    }
-
-    // Explicit Step-by-Step Validation
-    if (!selectedService) {
-      toast({
-        title: "Step 1 Missing",
-        description: "Please tap on a service card from the list to select it.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!date) {
-      toast({
-        title: "Step 2 Missing",
-        description: "Please select an appointment date from the calendar.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!time) {
-      toast({
-        title: "Step 3 Missing",
-        description: "Please pick a specific time slot.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const timeDate = parse(time, "hh:mm a", new Date());
-      const finalDateTime = new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate(),
-        timeDate.getHours(),
-        timeDate.getMinutes()
-      ).toISOString();
-
-      const bookingData = {
-        userId: user.uid,
-        userName: user.displayName || user.email || "User",
-        userPhone: user.phoneNumber || "",
-        salonId: salon.id,
-        salonName: salon.name,
-        salonOwnerId: salon.ownerId,
-        serviceIds: [selectedService],
-        serviceName: selectedService,
-        requestedSlotDateTime: finalDateTime,
-        requestInitiatedDateTime: new Date().toISOString(),
-        status: "Pending",
-        createdAt: serverTimestamp(),
-      };
-
-      addDocumentNonBlocking(collection(db, "bookings"), bookingData);
-
-      toast({
-        title: "Success!",
-        description: `Your booking request for ${selectedService} has been sent.`,
-      });
-      
-      router.push("/my-bookings");
-    } catch (error: any) {
-      console.error("Booking submission error:", error);
-      toast({
-        variant: "destructive",
-        title: "Submission Error",
-        description: "Something went wrong while processing your request. Please try again.",
-      });
-      setIsSubmitting(false);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-4 py-8">
-        <Button variant="ghost" onClick={() => router.back()} className="mb-6 -ml-2 gap-2">
-          <ChevronLeft className="h-4 w-4" /> Back to Search
-        </Button>
-
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-8">
-            <div className="relative h-[350px] w-full rounded-2xl overflow-hidden shadow-xl border-4 border-white">
-              <Image
-                src={salon.imageUrl || `https://picsum.photos/seed/${salon.id}/600/400`}
-                alt={salon.name}
-                fill
-                className="object-cover"
-                data-ai-hint="salon interior"
+      
+      <section className="relative h-[500px] w-full overflow-hidden flex items-center justify-center bg-slate-900">
+        <div className="absolute inset-0 z-0">
+          <Image 
+            src="/hero-salon.png" 
+            alt="Salon Hero" 
+            fill 
+            className="object-cover opacity-40"
+            priority
+          />
+          <div className="absolute inset-0 bg-black/20" />
+        </div>
+        <div className="container relative z-10 px-4 text-center">
+          <h1 className="mb-6 font-headline text-4xl font-bold tracking-tight text-white sm:text-6xl drop-shadow-2xl">
+            Find Your Perfect Style
+          </h1>
+          <p className="mx-auto mb-10 max-w-2xl text-lg text-white font-medium bg-black/30 backdrop-blur-sm rounded-lg p-3 inline-block">
+            Discover top-rated salons across India, view service menus, and book appointments instantly.
+          </p>
+          
+          <div className="mx-auto flex max-w-5xl flex-col gap-4 rounded-xl bg-card p-4 shadow-2xl sm:flex-row items-center border border-primary/10">
+            <div className="w-full sm:flex-1">
+              <Input 
+                placeholder="Search salon names..." 
+                className="h-12 border-none bg-muted/50 focus-visible:ring-1"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
               />
             </div>
+            <div className="flex flex-col gap-3 w-full sm:flex-row sm:w-auto">
+              <Select value={stateFilter} onValueChange={handleStateChange}>
+                <SelectTrigger className="h-12 w-full sm:w-[200px] border-none bg-muted/50">
+                  <SelectValue placeholder="Select State" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All States</SelectItem>
+                  {INDIA_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
 
-            <div className="space-y-6">
-              <div>
-                <h1 className="text-4xl font-bold mb-2">{salon.name}</h1>
-                <div className="flex flex-col gap-2 text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-primary" />
-                    <span>{salon.address}</span>
-                  </div>
-                  {salon.landmark && (
-                    <div className="flex items-center gap-2">
-                      <Info className="h-4 w-4 text-accent" />
-                      <span>Landmark: {salon.landmark}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold">1. Select a Service</h2>
-                  {selectedService && (
-                    <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 gap-1">
-                      <Check className="h-3 w-3" /> Selected
-                    </Badge>
-                  )}
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {salon.services?.map((service: any, idx: number) => (
-                    <Card
-                      key={idx}
-                      className={cn(
-                        "cursor-pointer transition-all border-2 relative",
-                        selectedService === service.name
-                          ? "border-primary bg-primary/5 ring-1 ring-primary shadow-md"
-                          : "border-transparent hover:border-primary/20 hover:bg-muted/30"
-                      )}
-                      onClick={() => setSelectedService(service.name)}
-                    >
-                      <CardContent className="p-4 flex justify-between items-center">
-                        <div className="space-y-1">
-                          <p className="font-bold">{service.name}</p>
-                          <p className="text-xs text-muted-foreground">{service.durationMinutes || 30} mins</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xl font-bold text-primary">₹{service.price}</p>
-                          {selectedService === service.name && (
-                            <div className="absolute top-2 right-2 bg-primary text-white rounded-full p-0.5">
-                              <Check className="h-3 w-3" />
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                  {(!salon.services || salon.services.length === 0) && (
-                    <p className="col-span-full text-muted-foreground italic">No services listed for this salon.</p>
-                  )}
-                </div>
-              </div>
+              <Select 
+                value={cityFilter} 
+                onValueChange={setCityFilter}
+                disabled={stateFilter === "all"}
+              >
+                <SelectTrigger className="h-12 w-full sm:w-[200px] border-none bg-muted/50">
+                  <SelectValue placeholder={stateFilter === "all" ? "Choose State First" : "Select City"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Cities</SelectItem>
+                  {cities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              
+              <Button className="h-12 px-8 bg-primary hover:bg-primary/90 text-white font-bold">
+                Search
+              </Button>
             </div>
           </div>
+        </div>
+      </section>
 
-          <div className="lg:col-span-1">
-            <Card className="sticky top-24 shadow-2xl border-primary/10 overflow-hidden">
-              <CardHeader className="bg-primary text-white">
-                <CardTitle>Schedule Appointment</CardTitle>
-                <CardDescription className="text-white/80">Choose your date and time</CardDescription>
-              </CardHeader>
-              <CardContent className="p-6 space-y-6">
-                <form onSubmit={handleBooking} className="space-y-6">
-                  <div className="space-y-2">
-                    <Label className="font-bold flex items-center gap-2">
-                      <span className="bg-primary text-white rounded-full w-5 h-5 inline-flex items-center justify-center text-[10px]">2</span>
-                      Select Date
-                    </Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant={"outline"}
-                          className={cn("w-full h-12 justify-start text-left font-normal", !date && "text-muted-foreground")}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {date ? format(date, "PPP") : <span>Pick a date</span>}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={date}
-                          onSelect={setDate}
-                          disabled={(date) => date < new Date() || date < new Date(new Date().setHours(0,0,0,0))}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="font-bold flex items-center gap-2">
-                      <span className="bg-primary text-white rounded-full w-5 h-5 inline-flex items-center justify-center text-[10px]">3</span>
-                      Pick a Slot
-                    </Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {["10:00 AM", "11:30 AM", "01:00 PM", "02:30 PM", "04:00 PM", "05:30 PM", "07:00 PM", "08:30 PM"].map((t) => (
-                        <Button
-                          key={t}
-                          type="button"
-                          variant={time === t ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setTime(t)}
-                          className={cn(time === t ? "bg-primary text-white" : "hover:border-primary/50")}
-                        >
-                          {t}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t space-y-4">
-                    <div className="bg-muted/30 p-3 rounded-lg space-y-2">
-                       <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Service</span>
-                          <span className="font-bold">{selectedService || "Not selected"}</span>
-                       </div>
-                       <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Date</span>
-                          <span className="font-bold">{date ? format(date, "MMM dd, yyyy") : "Not selected"}</span>
-                       </div>
-                       <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Time</span>
-                          <span className="font-bold">{time || "Not selected"}</span>
-                       </div>
-                    </div>
-
-                    <Button
-                      type="submit"
-                      className="w-full h-14 bg-primary hover:bg-primary/90 shadow-lg text-lg font-bold transition-all active:scale-[0.98]"
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? (
-                        <span className="flex items-center gap-2">
-                          <Loader2 className="h-5 w-5 animate-spin" /> Processing...
-                        </span>
-                      ) : (
-                        "Confirm Request"
-                      )}
-                    </Button>
-                    <p className="text-[10px] text-center text-muted-foreground leading-tight italic">
-                      Requesting a slot does not guarantee an appointment. The owner will notify you if they accept or reject.
-                    </p>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
+      <main className="container mx-auto px-4 py-16">
+        <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Available Salons</h2>
+            <p className="text-muted-foreground">
+              {isSalonsLoading ? "Refreshing listings..." : `Showing ${filteredSalons.length} professional outlets`}
+            </p>
           </div>
         </div>
+
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+          {filteredSalons.map((salon) => (
+            <Card key={salon.id} className="group overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+              <div className="relative h-56 w-full">
+                <Image 
+                  src={salon.imageUrl || "https://picsum.photos/seed/salon1/600/400"} 
+                  alt={salon.name} 
+                  fill 
+                  className="object-cover transition-transform group-hover:scale-105"
+                />
+                <Badge className="absolute left-4 top-4 bg-primary text-white hover:bg-primary shadow-lg">
+                  Verified
+                </Badge>
+                <div className="absolute right-4 top-4 rounded-full bg-white/90 p-2 shadow-md">
+                   <Star className="h-4 w-4 fill-current text-yellow-500" />
+                </div>
+              </div>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xl group-hover:text-primary transition-colors">{salon.name}</CardTitle>
+                <CardDescription className="flex items-center gap-1.5 text-sm">
+                  <MapPin className="h-4 w-4 text-primary" />
+                  {salon.landmark}, {salon.city}, {salon.state}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pb-4">
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {salon.services?.slice(0, 3).map((s: any, idx: number) => (
+                    <Badge key={idx} variant="secondary" className="bg-muted text-[10px] font-normal">
+                      {s.name}
+                    </Badge>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Clock className="h-3 w-3" /> Closes at 9:00 PM
+                </p>
+              </CardContent>
+              <CardFooter className="pt-0 border-t bg-muted/20 mt-4 px-6 py-4 flex justify-between items-center">
+                 <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground font-medium">Starts from</span>
+                    <span className="text-lg font-bold text-foreground">
+                      ₹{salon.services?.length ? Math.min(...salon.services.map((s: any) => s.price)) : 0}
+                    </span>
+                 </div>
+                 <Link href={`/salons/${salon.id}`}>
+                    <Button className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20">
+                      Book Now
+                    </Button>
+                 </Link>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
       </main>
+
+      <footer className="border-t bg-card mt-20 py-16">
+        <div className="container mx-auto px-4 text-center">
+          <div className="flex justify-center items-center gap-2 font-headline text-2xl font-bold text-primary mb-6">
+            <Scissors className="h-6 w-6 text-primary" />
+            Salon Chair
+          </div>
+          <p className="text-muted-foreground mb-8">© 2024 Salon Chair Marketplace.</p>
+        </div>
+      </footer>
     </div>
   );
 }
