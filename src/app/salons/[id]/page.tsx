@@ -1,34 +1,38 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { use } from "react";
 import { Navbar } from "@/components/navbar";
 import { MOCK_SALONS } from "@/app/lib/mock-data";
-import { INDIA_DATA, INDIA_STATES } from "@/app/lib/india-data";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Star, Scissors, Clock, SearchX, Loader2 } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
+import { MapPin, Clock, Scissors, IndianRupee, Star, Calendar as CalendarIcon, Loader2, CheckCircle2 } from "lucide-react";
+import Image from "next/image";
+import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
+import { doc, collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
-export default function Home() {
+export default function SalonDetail({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = use(paramsPromise);
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const router = useRouter();
-  const [search, setSearch] = useState("");
-  const [stateFilter, setStateFilter] = useState("all");
-  const [cityFilter, setCityFilter] = useState("all");
+  const { toast } = useToast();
+
+  const [selectedService, setSelectedService] = useState<any>(null);
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [isBooking, setIsBooking] = useState(false);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -36,186 +40,254 @@ export default function Home() {
     }
   }, [user, isUserLoading, router]);
 
-  const salonsQuery = useMemoFirebase(() => {
+  const salonRef = useMemoFirebase(() => {
     if (!db) return null;
-    return query(collection(db, "salons"), where("isPaid", "==", true));
-  }, [db]);
+    return doc(db, "salons", params.id);
+  }, [db, params.id]);
 
-  const { data: dbSalons, isLoading: isSalonsLoading } = useCollection(salonsQuery);
+  const { data: dbSalon, isLoading: isSalonLoading } = useDoc(salonRef);
 
-  const allSalons = useMemo(() => {
-    const real = dbSalons || [];
-    return [...real, ...MOCK_SALONS];
-  }, [dbSalons]);
+  const salon = useMemo(() => {
+    if (dbSalon) return dbSalon;
+    return MOCK_SALONS.find(s => s.id === params.id) || null;
+  }, [dbSalon, params.id]);
 
-  const cities = useMemo(() => {
-    if (stateFilter === "all") return [];
-    return INDIA_DATA[stateFilter] || [];
-  }, [stateFilter]);
+  const handleBooking = async () => {
+    if (!user || !salon || !selectedService || !date || !selectedTime) {
+      toast({
+        variant: "destructive",
+        title: "Missing Info",
+        description: "Please select a service, date, and time slot.",
+      });
+      return;
+    }
 
-  const filteredSalons = allSalons.filter(salon => {
-    const matchesSearch = salon.name.toLowerCase().includes(search.toLowerCase()) || 
-                         salon.city.toLowerCase().includes(search.toLowerCase());
-    const matchesState = stateFilter === "all" || salon.state === stateFilter;
-    const matchesCity = cityFilter === "all" || salon.city === cityFilter;
-    const isVisible = salon.isPaid;
-    return matchesSearch && matchesState && matchesCity && isVisible;
-  });
+    setIsBooking(true);
+    try {
+      // Combine date and time
+      const [hours, minutes] = selectedTime.split(":").map(Number);
+      const bookingDateTime = new Date(date);
+      bookingDateTime.setHours(hours, minutes, 0, 0);
 
-  const handleStateChange = (val: string) => {
-    setStateFilter(val);
-    setCityFilter("all");
+      await addDoc(collection(db, "bookings"), {
+        userId: user.uid,
+        userName: user.displayName || "Customer",
+        userPhone: user.phoneNumber || "Not provided",
+        salonId: salon.id,
+        salonName: salon.name,
+        salonOwnerId: salon.ownerId,
+        serviceIds: [selectedService.name],
+        serviceName: selectedService.name,
+        requestedSlotDateTime: bookingDateTime.toISOString(),
+        status: "Pending",
+        createdAt: serverTimestamp(),
+      });
+
+      toast({
+        title: "Booking Requested!",
+        description: "Your request has been sent to the salon owner.",
+      });
+      router.push("/my-bookings");
+    } catch (error: any) {
+      console.error(error);
+      toast({
+        variant: "destructive",
+        title: "Booking Failed",
+        description: error.message || "Could not complete the request.",
+      });
+    } finally {
+      setIsBooking(false);
+    }
   };
 
-  if (isUserLoading || !user) {
+  if (isUserLoading || isSalonLoading) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-10 w-10 text-primary animate-spin" />
-          <p className="text-muted-foreground font-medium">Verifying access...</p>
-        </div>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
+
+  if (!salon) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 py-20 text-center">
+          <h1 className="text-2xl font-bold">Salon not found</h1>
+          <Button onClick={() => router.push("/")} className="mt-4">Back to Marketplace</Button>
+        </main>
+      </div>
+    );
+  }
+
+  const timeSlots = [
+    "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00"
+  ];
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <section className="relative h-[500px] w-full overflow-hidden flex items-center justify-center bg-slate-900">
-        <div className="absolute inset-0 z-0">
-          <Image 
-            src="/hero-salon.png" 
-            alt="Salon Hero" 
-            fill 
-            className="object-cover opacity-40"
-            priority
-          />
-          <div className="absolute inset-0 bg-black/20" />
-        </div>
-        <div className="container relative z-10 px-4 text-center">
-          <h1 className="mb-6 font-headline text-4xl font-bold tracking-tight text-white sm:text-6xl drop-shadow-2xl">
-            Find Your Perfect Style
-          </h1>
-          <p className="mx-auto mb-10 max-w-2xl text-lg text-white font-medium bg-black/30 backdrop-blur-sm rounded-lg p-3 inline-block">
-            Discover top-rated salons across India, view service menus, and book appointments instantly.
-          </p>
-          
-          <div className="mx-auto flex max-w-5xl flex-col gap-4 rounded-xl bg-card p-4 shadow-2xl sm:flex-row items-center border border-primary/10">
-            <div className="w-full sm:flex-1">
-              <Input 
-                placeholder="Search salon names..." 
-                className="h-12 border-none bg-muted/50 focus-visible:ring-1"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-3 w-full sm:flex-row sm:w-auto">
-              <Select value={stateFilter} onValueChange={handleStateChange}>
-                <SelectTrigger className="h-12 w-full sm:w-[200px] border-none bg-muted/50">
-                  <SelectValue placeholder="Select State" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All States</SelectItem>
-                  {INDIA_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-
-              <Select 
-                value={cityFilter} 
-                onValueChange={setCityFilter}
-                disabled={stateFilter === "all"}
-              >
-                <SelectTrigger className="h-12 w-full sm:w-[200px] border-none bg-muted/50">
-                  <SelectValue placeholder={stateFilter === "all" ? "Choose State First" : "Select City"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Cities</SelectItem>
-                  {cities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              
-              <Button className="h-12 px-8 bg-primary hover:bg-primary/90 text-white font-bold">
-                Search
-              </Button>
+      <div className="relative h-64 md:h-96 w-full">
+        <Image 
+          src={salon.imageUrl || "https://picsum.photos/seed/salon1/1200/600"} 
+          alt={salon.name} 
+          fill 
+          className="object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+        <div className="absolute bottom-0 left-0 w-full p-6 md:p-12 text-white">
+          <div className="container mx-auto">
+            <Badge className="mb-4 bg-primary hover:bg-primary">Verified Outlet</Badge>
+            <h1 className="text-4xl md:text-6xl font-bold mb-2">{salon.name}</h1>
+            <div className="flex flex-wrap items-center gap-4 text-sm md:text-base opacity-90">
+              <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4" /> {salon.address}</span>
+              <span className="flex items-center gap-1.5"><Star className="h-4 w-4 fill-current text-yellow-500" /> 4.8 (120+ reviews)</span>
             </div>
           </div>
         </div>
-      </section>
+      </div>
 
-      <main className="container mx-auto px-4 py-16">
-        <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight">Available Salons</h2>
-            <p className="text-muted-foreground">
-              {isSalonsLoading ? "Refreshing listings..." : `Showing ${filteredSalons.length} professional outlets`}
-            </p>
-          </div>
-        </div>
+      <main className="container mx-auto px-4 py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-8">
+            <section>
+              <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+                <Scissors className="h-6 w-6 text-primary" /> 
+                Our Services
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {salon.services?.map((service: any, idx: number) => (
+                  <Card 
+                    key={idx} 
+                    className={cn(
+                      "cursor-pointer transition-all hover:border-primary/50",
+                      selectedService?.name === service.name ? "border-primary bg-primary/5 ring-1 ring-primary" : ""
+                    )}
+                    onClick={() => setSelectedService(service)}
+                  >
+                    <CardContent className="p-4 flex justify-between items-center">
+                      <div>
+                        <h3 className="font-bold">{service.name}</h3>
+                        <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                          <Clock className="h-3 w-3" /> ~30 mins
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-primary">₹{service.price}</div>
+                        {selectedService?.name === service.name && (
+                          <CheckCircle2 className="h-5 w-5 text-primary ml-auto mt-1" />
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </section>
 
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {filteredSalons.map((salon) => (
-            <Card key={salon.id} className="group overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
-              <div className="relative h-56 w-full">
-                <Image 
-                  src={salon.imageUrl || "https://picsum.photos/seed/salon1/600/400"} 
-                  alt={salon.name} 
-                  fill 
-                  className="object-cover transition-transform group-hover:scale-105"
-                />
-                <Badge className="absolute left-4 top-4 bg-primary text-white hover:bg-primary shadow-lg">
-                  Verified
-                </Badge>
-                <div className="absolute right-4 top-4 rounded-full bg-white/90 p-2 shadow-md">
-                   <Star className="h-4 w-4 fill-current text-yellow-500" />
+            <section className="bg-muted/30 rounded-2xl p-6 border border-border">
+              <h3 className="font-bold mb-4 flex items-center gap-2">
+                <Clock className="h-5 w-5 text-primary" /> About this Salon
+              </h3>
+              <p className="text-muted-foreground leading-relaxed">
+                {salon.description || "A premier grooming destination offering expert services in a comfortable environment. Our team of professionals is dedicated to providing the best experience tailored to your style."}
+              </p>
+              <div className="mt-6 flex flex-wrap gap-6 text-sm">
+                <div className="flex flex-col gap-1">
+                  <span className="font-bold text-foreground">Opening Hours</span>
+                  <span className="text-muted-foreground">Mon - Sun: 09:00 AM - 09:00 PM</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="font-bold text-foreground">Location</span>
+                  <span className="text-muted-foreground">{salon.city}, {salon.state}</span>
                 </div>
               </div>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xl group-hover:text-primary transition-colors">{salon.name}</CardTitle>
-                <CardDescription className="flex items-center gap-1.5 text-sm">
-                  <MapPin className="h-4 w-4 text-primary" />
-                  {salon.landmark}, {salon.city}, {salon.state}
-                </CardDescription>
+            </section>
+          </div>
+
+          <div className="lg:col-span-1">
+            <Card className="sticky top-24 shadow-xl border-primary/10">
+              <CardHeader>
+                <CardTitle>Book Appointment</CardTitle>
+                <CardDescription>Select your preferred slot</CardDescription>
               </CardHeader>
-              <CardContent className="pb-4">
-                <div className="mb-4 flex flex-wrap gap-2">
-                  {salon.services?.slice(0, 3).map((s: any, idx: number) => (
-                    <Badge key={idx} variant="secondary" className="bg-muted text-[10px] font-normal">
-                      {s.name}
-                    </Badge>
-                  ))}
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">1. Choose Date</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left font-normal h-12",
+                          !date && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {date ? format(date, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={date}
+                        onSelect={setDate}
+                        disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Clock className="h-3 w-3" /> Closes at 9:00 PM
-                </p>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">2. Choose Time</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {timeSlots.map((time) => (
+                      <Button
+                        key={time}
+                        variant={selectedTime === time ? "default" : "outline"}
+                        className="h-10 text-xs"
+                        onClick={() => setSelectedTime(time)}
+                      >
+                        {time}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {selectedService && (
+                  <div className="pt-4 border-t space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Service</span>
+                      <span className="font-medium">{selectedService.name}</span>
+                    </div>
+                    <div className="flex justify-between text-lg font-bold">
+                      <span>Total</span>
+                      <span className="text-primary flex items-center gap-1">
+                        <IndianRupee className="h-4 w-4" /> {selectedService.price}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </CardContent>
-              <CardFooter className="pt-0 border-t bg-muted/20 mt-4 px-6 py-4 flex justify-between items-center">
-                 <div className="flex flex-col">
-                    <span className="text-xs text-muted-foreground font-medium">Starts from</span>
-                    <span className="text-lg font-bold text-foreground">
-                      ₹{salon.services?.length ? Math.min(...salon.services.map((s: any) => s.price)) : 0}
-                    </span>
-                 </div>
-                 <Link href={`/salons/${salon.id}`}>
-                    <Button className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20">
-                      Book Now
-                    </Button>
-                 </Link>
+              <CardFooter>
+                <Button 
+                  className="w-full h-12 text-lg font-bold shadow-lg shadow-primary/20" 
+                  onClick={handleBooking}
+                  disabled={isBooking || !selectedService || !selectedTime}
+                >
+                  {isBooking ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Booking...
+                    </>
+                  ) : "Confirm Request"}
+                </Button>
               </CardFooter>
             </Card>
-          ))}
+          </div>
         </div>
       </main>
-
-      <footer className="border-t bg-card mt-20 py-16">
-        <div className="container mx-auto px-4 text-center">
-          <div className="flex justify-center items-center gap-2 font-headline text-2xl font-bold text-primary mb-6">
-            <Scissors className="h-6 w-6 text-primary" />
-            Salon Chair
-          </div>
-          <p className="text-muted-foreground mb-8">© 2024 Salon Chair Marketplace.</p>
-        </div>
-      </footer>
     </div>
   );
 }

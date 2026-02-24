@@ -22,6 +22,9 @@ import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebas
 import { collection, query, where } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
+// Placeholder for hero image that can be easily updated
+const HERO_IMAGE_URL = "https://picsum.photos/seed/salonhero/1200/600";
+
 export default function Home() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
@@ -82,24 +85,27 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       <Navbar />
       
-      <section className="relative h-[500px] w-full overflow-hidden flex items-center justify-center bg-slate-900">
+      <section className="relative w-full overflow-hidden flex items-center justify-center bg-black min-h-[400px] md:min-h-[600px]">
         <div className="absolute inset-0 z-0">
           <Image 
-            src="/hero-salon.png" 
+            src={HERO_IMAGE_URL} 
             alt="Salon Hero" 
             fill 
-            className="object-cover opacity-40"
+            className="object-contain"
             priority
+            data-ai-hint="salon interior"
           />
-          <div className="absolute inset-0 bg-black/20" />
         </div>
-        <div className="container relative z-10 px-4 text-center">
-          <h1 className="mb-6 font-headline text-4xl font-bold tracking-tight text-white sm:text-6xl drop-shadow-2xl">
-            Find Your Perfect Style
-          </h1>
-          <p className="mx-auto mb-10 max-w-2xl text-lg text-white font-medium bg-black/30 backdrop-blur-sm rounded-lg p-3 inline-block">
-            Discover top-rated salons across India, view service menus, and book appointments instantly.
-          </p>
+        
+        <div className="container relative z-10 px-4 py-20 text-center">
+          <div className="inline-block bg-black/50 backdrop-blur-md rounded-3xl p-8 mb-8 border border-white/10 shadow-2xl">
+            <h1 className="mb-4 font-headline text-4xl font-extrabold tracking-tight text-white sm:text-6xl drop-shadow-2xl">
+              Find Your Perfect Style
+            </h1>
+            <p className="mx-auto max-w-2xl text-lg text-white/90 font-medium">
+              Discover top-rated salons across India, view service menus, and book appointments instantly.
+            </p>
+          </div>
           
           <div className="mx-auto flex max-w-5xl flex-col gap-4 rounded-xl bg-card p-4 shadow-2xl sm:flex-row items-center border border-primary/10">
             <div className="w-full sm:flex-1">
@@ -204,6 +210,13 @@ export default function Home() {
               </CardFooter>
             </Card>
           ))}
+          {filteredSalons.length === 0 && (
+            <div className="col-span-full py-20 text-center">
+              <SearchX className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+              <h3 className="text-xl font-semibold">No salons found</h3>
+              <p className="text-muted-foreground">Try adjusting your search or filters.</p>
+            </div>
+          )}
         </div>
       </main>
 
@@ -218,4 +231,4 @@ export default function Home() {
       </footer>
     </div>
   );
-} 
+}
