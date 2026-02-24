@@ -64,7 +64,6 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
 
     setIsBooking(true);
     try {
-      // Combine date and time
       const [hours, minutes] = selectedTime.split(":").map(Number);
       const bookingDateTime = new Date(date);
       bookingDateTime.setHours(hours, minutes, 0, 0);

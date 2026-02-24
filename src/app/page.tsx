@@ -91,14 +91,15 @@ export default function Home() {
             src={HERO_IMAGE_URL} 
             alt="Salon Hero" 
             fill 
-            className="object-contain"
+            className="object-cover"
             priority
             data-ai-hint="salon interior"
           />
+          <div className="absolute inset-0 bg-black/40" />
         </div>
         
         <div className="container relative z-10 px-4 py-20 text-center">
-          <div className="inline-block bg-black/50 backdrop-blur-md rounded-3xl p-8 mb-8 border border-white/10 shadow-2xl">
+          <div className="inline-block bg-black/60 backdrop-blur-md rounded-3xl p-8 mb-8 border border-white/10 shadow-2xl">
             <h1 className="mb-4 font-headline text-4xl font-extrabold tracking-tight text-white sm:text-6xl drop-shadow-2xl">
               Find Your Perfect Style
             </h1>
