@@ -23,7 +23,7 @@ import { collection, query, where } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
 // Placeholder for hero image that can be easily updated
-const HERO_IMAGE_URL = "https://picsum.photos/seed/salonhero/1200/600";
+const HERO_IMAGE_URL = "/hero-salon.png";
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
