@@ -68,9 +68,11 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
       const bookingDateTime = new Date(date);
       bookingDateTime.setHours(hours, minutes, 0, 0);
 
+      // MODIFIED: Added userEmail and ensured ownerId is handled correctly
       await addDoc(collection(db, "bookings"), {
         userId: user.uid,
         userName: user.displayName || "Customer",
+        userEmail: user.email || "No email provided",
         userPhone: user.phoneNumber || "Not provided",
         salonId: salon.id,
         salonName: salon.name,
