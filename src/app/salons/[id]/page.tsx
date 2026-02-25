@@ -4,10 +4,10 @@ import { useState, useMemo, useEffect } from "react";
 import { use } from "react";
 import { Navbar } from "@/components/navbar";
 import { MOCK_SALONS } from "@/app/lib/mock-data";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Clock, Scissors, IndianRupee, Star, Calendar as CalendarIcon, Loader2, CheckCircle2 } from "lucide-react";
+import { MapPin, Clock, Scissors, Star, Calendar as CalendarIcon, Loader2, CheckCircle2 } from "lucide-react";
 import Image from "next/image";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc, collection, addDoc, serverTimestamp } from "firebase/firestore";
@@ -53,7 +53,7 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
   }, [dbSalon, params.id]);
 
   const handleBooking = async () => {
-    if (!user || !salon || !selectedService || !date || !selectedTime) {
+    if (!user || !salon || !selectedService || !date || !selectedTime || !db) {
       toast({
         variant: "destructive",
         title: "Missing Info",
@@ -74,7 +74,7 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
         userPhone: user.phoneNumber || "Not provided",
         salonId: salon.id,
         salonName: salon.name,
-        salonOwnerId: salon.ownerId,
+        salonOwnerId: salon.ownerId || "admin",
         serviceIds: [selectedService.name],
         serviceName: selectedService.name,
         requestedSlotDateTime: bookingDateTime.toISOString(),
@@ -88,7 +88,7 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
       });
       router.push("/my-bookings");
     } catch (error: any) {
-      console.error(error);
+      console.error("Booking Error:", error);
       toast({
         variant: "destructive",
         title: "Booking Failed",
@@ -103,6 +103,7 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Loading salon details...</p>
       </div>
     );
   }
@@ -140,7 +141,7 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
             <Badge className="mb-4 bg-primary hover:bg-primary">Verified Outlet</Badge>
             <h1 className="text-4xl md:text-6xl font-bold mb-2">{salon.name}</h1>
             <div className="flex flex-wrap items-center gap-4 text-sm md:text-base opacity-90">
-              <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4" /> {salon.address}</span>
+              <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4" /> {salon.address || `${salon.city}, ${salon.state}`}</span>
               <span className="flex items-center gap-1.5"><Star className="h-4 w-4 fill-current text-yellow-500" /> 4.8 (120+ reviews)</span>
             </div>
           </div>
@@ -263,7 +264,7 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
                     <div className="flex justify-between text-lg font-bold">
                       <span>Total</span>
                       <span className="text-primary flex items-center gap-1">
-                        <IndianRupee className="h-4 w-4" /> {selectedService.price}
+                        ₹ {selectedService.price}
                       </span>
                     </div>
                   </div>
