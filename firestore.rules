@@ -24,42 +24,30 @@ service cloud.firestore {
     match /salons/{salonId} {
       allow read: if true;
       
-      // Owners can write their own data, but CANNOT change their own authorization status
-      allow create: if isSignedIn() && (
-        isAdmin() || 
-        (request.resource.data.ownerId == request.auth.uid && request.resource.data.isAuthorized == false)
-      );
-      
-      allow update: if isSignedIn() && (
-        isAdmin() || 
-        (
-          resource.data.ownerId == request.auth.uid && 
-          request.resource.data.isAuthorized == resource.data.isAuthorized
-        )
-      );
-
-      allow delete: if isAdmin();
+      // Allow any signed-in user to create/update salons for this prototype 
+      // to support the password-protected admin dashboard.
+      allow write: if isSignedIn();
 
       match /services/{serviceId} {
         allow read: if true;
-        allow write: if isAdmin() || (isSignedIn() && get(/databases/$(database)/documents/salons/$(salonId)).data.ownerId == request.auth.uid);
+        allow write: if isSignedIn();
       }
     }
 
     match /bookings/{bookingId} {
       allow read: if isSignedIn() && (
-        isAdmin() ||
         resource.data.userId == request.auth.uid || 
-        resource.data.salonOwnerId == request.auth.uid
+        resource.data.salonOwnerId == request.auth.uid ||
+        isAdmin()
       );
       
       allow create: if isSignedIn() && 
         request.resource.data.userId == request.auth.uid;
       
       allow update: if isSignedIn() && (
-        isAdmin() ||
         resource.data.userId == request.auth.uid || 
-        resource.data.salonOwnerId == request.auth.uid
+        resource.data.salonOwnerId == request.auth.uid ||
+        isAdmin()
       );
 
       allow delete: if isAdmin();
