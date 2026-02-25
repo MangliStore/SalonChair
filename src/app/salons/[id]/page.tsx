@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -7,13 +8,13 @@ import { MOCK_SALONS } from "@/app/lib/mock-data";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Clock, Scissors, Star, Calendar as CalendarIcon, Loader2, CheckCircle2 } from "lucide-react";
+import { MapPin, Clock, Scissors, Star, Calendar as CalendarIcon, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import Image from "next/image";
-import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
-import { doc, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
+import { doc, collection, addDoc, serverTimestamp, query, where } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -40,6 +41,7 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
     }
   }, [user, isUserLoading, router]);
 
+  // Fetch Salon Details
   const salonRef = useMemoFirebase(() => {
     if (!db) return null;
     return doc(db, "salons", params.id);
@@ -52,6 +54,33 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
     return MOCK_SALONS.find(s => s.id === params.id) || null;
   }, [dbSalon, params.id]);
 
+  // Fetch Existing Bookings for this salon to prevent double booking
+  const existingBookingsQuery = useMemoFirebase(() => {
+    if (!db || !params.id) return null;
+    return query(
+      collection(db, "bookings"),
+      where("salonId", "==", params.id),
+      where("status", "in", ["Pending", "Accepted"])
+    );
+  }, [db, params.id]);
+
+  const { data: existingBookings, isLoading: isBookingsLoading } = useCollection(existingBookingsQuery);
+
+  // Helper to check if a time slot is already occupied
+  const occupiedSlots = useMemo(() => {
+    if (!existingBookings || !date) return new Set();
+    const dateStr = format(date, "yyyy-MM-dd");
+    
+    return new Set(
+      existingBookings
+        .filter(b => b.requestedSlotDateTime.startsWith(dateStr))
+        .map(b => {
+          const dt = new Date(b.requestedSlotDateTime);
+          return format(dt, "HH:mm");
+        })
+    );
+  }, [existingBookings, date]);
+
   const handleBooking = async () => {
     if (!user || !salon || !selectedService || !date || !selectedTime || !db) {
       toast({
@@ -62,13 +91,22 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
       return;
     }
 
+    // Double check availability before submitting
+    if (occupiedSlots.has(selectedTime)) {
+      toast({
+        variant: "destructive",
+        title: "Slot Taken",
+        description: "This time slot was just booked by someone else. Please choose another.",
+      });
+      return;
+    }
+
     setIsBooking(true);
     try {
       const [hours, minutes] = selectedTime.split(":").map(Number);
       const bookingDateTime = new Date(date);
       bookingDateTime.setHours(hours, minutes, 0, 0);
 
-      // MODIFIED: Added userEmail and ensured ownerId is handled correctly
       await addDoc(collection(db, "bookings"), {
         userId: user.uid,
         userName: user.displayName || "Customer",
@@ -125,6 +163,8 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
   const timeSlots = [
     "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00"
   ];
+
+  const isSlotOccupied = (time: string) => occupiedSlots.has(time);
 
   return (
     <div className="min-h-screen bg-background">
@@ -244,17 +284,31 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
                 <div className="space-y-2">
                   <label className="text-sm font-medium">2. Choose Time</label>
                   <div className="grid grid-cols-3 gap-2">
-                    {timeSlots.map((time) => (
-                      <Button
-                        key={time}
-                        variant={selectedTime === time ? "default" : "outline"}
-                        className="h-10 text-xs"
-                        onClick={() => setSelectedTime(time)}
-                      >
-                        {time}
-                      </Button>
-                    ))}
+                    {timeSlots.map((time) => {
+                      const occupied = isSlotOccupied(time);
+                      return (
+                        <Button
+                          key={time}
+                          variant={selectedTime === time ? "default" : "outline"}
+                          className={cn(
+                            "h-10 text-xs",
+                            occupied && "opacity-50 cursor-not-allowed bg-muted text-muted-foreground border-dashed"
+                          )}
+                          onClick={() => !occupied && setSelectedTime(time)}
+                          disabled={occupied}
+                        >
+                          {time}
+                          {occupied && " (X)"}
+                        </Button>
+                      );
+                    })}
                   </div>
+                  {selectedTime && isSlotOccupied(selectedTime) && (
+                    <div className="flex items-center gap-2 text-destructive text-xs mt-2 font-medium">
+                      <AlertCircle className="h-3 w-3" />
+                      This chair is already booked. Please pick a different time.
+                    </div>
+                  )}
                 </div>
 
                 {selectedService && (
@@ -276,14 +330,14 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
                 <Button 
                   className="w-full h-12 text-lg font-bold shadow-lg shadow-primary/20" 
                   onClick={handleBooking}
-                  disabled={isBooking || !selectedService || !selectedTime}
+                  disabled={isBooking || !selectedService || !selectedTime || isSlotOccupied(selectedTime!)}
                 >
                   {isBooking ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Booking...
                     </>
-                  ) : "Confirm Request"}
+                  ) : isSlotOccupied(selectedTime!) ? "Slot Taken" : "Confirm Request"}
                 </Button>
               </CardFooter>
             </Card>
