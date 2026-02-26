@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MessageSquare, Send, Loader2 } from "lucide-react";
+import { MessageSquare, Send, Loader2, AlertCircle } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, addDoc, serverTimestamp, query, orderBy } from "firebase/firestore";
 import { format } from "date-fns";
@@ -76,6 +76,11 @@ export function ChatDialog({ bookingId, recipientName }: ChatDialogProps) {
             Chat with {recipientName}
           </DialogTitle>
         </DialogHeader>
+
+        <div className="bg-amber-50 border-b border-amber-100 px-4 py-2 text-[11px] text-amber-800 flex items-center gap-2">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          <p className="font-medium">Notice: Do not share contact numbers. Visit/Come to the salon.</p>
+        </div>
         
         <ScrollArea className="flex-1 p-4">
           <div className="space-y-4">
