@@ -3,7 +3,7 @@
 
 import { useState, useMemo } from "react";
 import { Navbar } from "@/components/navbar";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,19 +25,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Flag,
-  AlertCircle,
   Scissors,
-  IndianRupee,
-  ShieldAlert,
   Loader2,
-  Plus,
-  Trash2,
   Store,
   CheckCircle2,
   Clock,
   Calendar,
-  User,
   Phone
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -48,6 +41,7 @@ import { INDIA_DATA, INDIA_STATES } from "@/app/lib/india-data";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
+import { ChatDialog } from "@/components/chat-dialog";
 
 export default function OwnerDashboard() {
   const { user, isUserLoading } = useUser();
@@ -57,7 +51,6 @@ export default function OwnerDashboard() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch the user's salon
   const salonsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collection(db, "salons"), where("ownerId", "==", user.uid), limit(1));
@@ -66,7 +59,6 @@ export default function OwnerDashboard() {
   const { data: salons, isLoading: isSalonLoading } = useCollection(salonsQuery);
   const mySalon = salons?.[0] || null;
 
-  // Fetch bookings
   const bookingsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collection(db, "bookings"), where("salonOwnerId", "==", user.uid));
@@ -125,56 +117,42 @@ export default function OwnerDashboard() {
     toast({ title: `Booking ${action}` });
   };
 
-  if (isUserLoading || isSalonLoading) return <div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
+  if (isUserLoading || isSalonLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
   if (!user) return <div className="p-20 text-center"><Link href="/login"><Button>Sign In to Access Dashboard</Button></Link></div>;
 
   return (
-    <div className="dark min-h-screen bg-black text-white flex flex-col">
+    <div className="min-h-screen bg-muted/20 flex flex-col">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
         {!mySalon ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Store className="h-16 w-16 text-zinc-700 mb-6" />
+          <div className="flex flex-col items-center justify-center py-20 bg-card rounded-2xl shadow-sm">
+            <Store className="h-16 w-16 text-muted-foreground mb-6" />
             <h1 className="text-3xl font-bold mb-2">No Shop Profile Found</h1>
-            <p className="text-zinc-400 mb-8">Setup your shop details to start receiving bookings.</p>
+            <p className="text-muted-foreground mb-8">Setup your shop details to start receiving bookings.</p>
             <Button size="lg" onClick={openEditModal}>Setup My Salon</Button>
           </div>
         ) : (
           <>
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 bg-zinc-900 p-6 rounded-2xl border border-zinc-800">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 bg-card p-6 rounded-2xl shadow-sm border">
               <div>
                 <div className="flex items-center gap-3 mb-1">
-                  <h1 className="text-3xl font-extrabold">{mySalon.name}</h1>
+                  <h1 className="text-3xl font-bold">{mySalon.name}</h1>
                   {mySalon.isAuthorized ? (
                     <Badge className="bg-green-600">Verified & Live</Badge>
                   ) : (
-                    <Badge variant="secondary" className="bg-yellow-600">Pending Review</Badge>
+                    <Badge variant="secondary">Pending Review</Badge>
                   )}
                 </div>
-                <p className="text-zinc-400">{mySalon.city}, {mySalon.state}</p>
+                <p className="text-muted-foreground">{mySalon.city}, {mySalon.state}</p>
               </div>
               <div className="flex gap-3">
-                <Button variant="outline" onClick={openEditModal} className="border-zinc-700">Edit Profile</Button>
-                <Button className="bg-primary hover:bg-primary/90">Renew Subscription</Button>
+                <Button variant="outline" onClick={openEditModal}>Edit Profile</Button>
+                <Button>Renew Subscription</Button>
               </div>
-            </div>
-
-            {!mySalon.isAuthorized && (
-              <div className="mb-8 p-4 bg-yellow-900/20 border border-yellow-900/30 rounded-xl flex gap-3 text-yellow-500">
-                <Clock className="h-5 w-5 shrink-0" />
-                <p className="text-sm">Your salon is currently <b>Hidden</b> from the public marketplace. An admin will verify your details and payment before making your shop live.</p>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-              <Card className="bg-zinc-900 border-zinc-800"><CardHeader><CardTitle className="text-xs text-zinc-500 uppercase">Status</CardTitle></CardHeader><CardContent><div className="text-xl font-bold">{mySalon.isAuthorized ? 'Authorized' : 'Pending Verification'}</div></CardContent></Card>
-              <Card className="bg-zinc-900 border-zinc-800"><CardHeader><CardTitle className="text-xs text-zinc-500 uppercase">Pending Bookings</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold text-primary">{bookings.filter(b => b.status === 'Pending').length}</div></CardContent></Card>
-              <Card className="bg-zinc-900 border-zinc-800"><CardHeader><CardTitle className="text-xs text-zinc-500 uppercase">Confirmed Today</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold text-green-500">{bookings.filter(b => b.status === 'Accepted').length}</div></CardContent></Card>
-              <Card className="bg-zinc-900 border-zinc-800"><CardHeader><CardTitle className="text-xs text-zinc-500 uppercase">Subscription</CardTitle></CardHeader><CardContent><Badge>{mySalon.isPaid ? 'Paid' : 'Expired'}</Badge></CardContent></Card>
             </div>
 
             <Tabs defaultValue="new">
-              <TabsList className="bg-zinc-900 border-zinc-800 mb-6">
+              <TabsList className="mb-6">
                 <TabsTrigger value="new">New Requests ({bookings.filter(b => b.status === 'Pending').length})</TabsTrigger>
                 <TabsTrigger value="confirmed">Booked Appointments ({bookings.filter(b => b.status === 'Accepted').length})</TabsTrigger>
                 <TabsTrigger value="history">History</TabsTrigger>
@@ -186,7 +164,7 @@ export default function OwnerDashboard() {
                     <BookingCard key={b.id} booking={b} onAction={handleBookingAction} />
                   ))
                 ) : (
-                  <div className="py-20 text-center border-2 border-dashed border-zinc-800 rounded-xl text-zinc-500">
+                  <div className="py-20 text-center border-2 border-dashed rounded-xl text-muted-foreground">
                     <Calendar className="h-10 w-10 mx-auto mb-4 opacity-20" />
                     No new appointment requests.
                   </div>
@@ -199,7 +177,7 @@ export default function OwnerDashboard() {
                     <BookingCard key={b.id} booking={b} onAction={handleBookingAction} showHistoryActions />
                   ))
                 ) : (
-                  <div className="py-20 text-center border-2 border-dashed border-zinc-800 rounded-xl text-zinc-500">
+                  <div className="py-20 text-center border-2 border-dashed rounded-xl text-muted-foreground">
                     <CheckCircle2 className="h-10 w-10 mx-auto mb-4 opacity-20" />
                     No confirmed appointments.
                   </div>
@@ -212,7 +190,7 @@ export default function OwnerDashboard() {
                     <BookingCard key={b.id} booking={b} onAction={handleBookingAction} isHistory />
                   ))
                 ) : (
-                  <div className="py-20 text-center border-2 border-dashed border-zinc-800 rounded-xl text-zinc-500">
+                  <div className="py-20 text-center border-2 border-dashed rounded-xl text-muted-foreground">
                     No booking history found.
                   </div>
                 )}
@@ -223,27 +201,27 @@ export default function OwnerDashboard() {
       </main>
 
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-2xl bg-zinc-950 border-zinc-800 text-white">
+        <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>Edit Salon Profile</DialogTitle><DialogDescription>Admin will review these details before approval.</DialogDescription></DialogHeader>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Salon Name</Label><Input className="bg-zinc-900 border-zinc-800" value={salonForm.name} onChange={e => setSalonForm({...salonForm, name: e.target.value})} /></div>
-              <div className="space-y-2"><Label>Landmark</Label><Input className="bg-zinc-900 border-zinc-800" value={salonForm.landmark} onChange={e => setSalonForm({...salonForm, landmark: e.target.value})} /></div>
+              <div className="space-y-2"><Label>Salon Name</Label><Input value={salonForm.name} onChange={e => setSalonForm({...salonForm, name: e.target.value})} /></div>
+              <div className="space-y-2"><Label>Landmark</Label><Input value={salonForm.landmark} onChange={e => setSalonForm({...salonForm, landmark: e.target.value})} /></div>
             </div>
-            <div className="space-y-2"><Label>Full Address</Label><Input className="bg-zinc-900 border-zinc-800" value={salonForm.address} onChange={e => setSalonForm({...salonForm, address: e.target.value})} /></div>
+            <div className="space-y-2"><Label>Full Address</Label><Input value={salonForm.address} onChange={e => setSalonForm({...salonForm, address: e.target.value})} /></div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>State</Label>
                 <Select value={salonForm.state} onValueChange={v => setSalonForm({...salonForm, state: v, city: ""})}>
-                  <SelectTrigger className="bg-zinc-900 border-zinc-800"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-zinc-900 border-zinc-800">{INDIA_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{INDIA_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>City</Label>
                 <Select value={salonForm.city} onValueChange={v => setSalonForm({...salonForm, city: v})} disabled={!salonForm.state}>
-                  <SelectTrigger className="bg-zinc-900 border-zinc-800"><SelectValue /></SelectTrigger>
-                  <SelectContent className="bg-zinc-900 border-zinc-800">{(salonForm.state ? INDIA_DATA[salonForm.state] : []).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{(salonForm.state ? INDIA_DATA[salonForm.state] : []).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
@@ -265,15 +243,15 @@ function BookingCard({ booking, onAction, isHistory = false, showHistoryActions 
   showHistoryActions?: boolean
 }) {
   const statusColors: any = {
-    'Pending': 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50',
-    'Accepted': 'bg-green-500/20 text-green-500 border-green-500/50',
-    'Rejected': 'bg-red-500/20 text-red-500 border-red-500/50',
-    'NoShow': 'bg-zinc-500/20 text-zinc-500 border-zinc-500/50',
-    'Completed': 'bg-blue-500/20 text-blue-500 border-blue-500/50',
+    'Pending': 'bg-yellow-100 text-yellow-700 border-yellow-200',
+    'Accepted': 'bg-green-100 text-green-700 border-green-200',
+    'Rejected': 'bg-red-100 text-red-700 border-red-200',
+    'NoShow': 'bg-zinc-100 text-zinc-700 border-zinc-200',
+    'Completed': 'bg-blue-100 text-blue-700 border-blue-200',
   };
 
   return (
-    <Card className="bg-zinc-900 border-zinc-800 overflow-hidden hover:border-zinc-700 transition-colors">
+    <Card className="overflow-hidden hover:shadow-md transition-shadow">
       <div className="p-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="space-y-2 flex-1">
@@ -282,25 +260,27 @@ function BookingCard({ booking, onAction, isHistory = false, showHistoryActions 
               <Badge variant="outline" className={cn("text-[10px] font-bold uppercase", statusColors[booking.status])}>
                 {booking.status}
               </Badge>
+              {booking.status === "Accepted" && (
+                <ChatDialog bookingId={booking.id} recipientName={booking.userName} />
+              )}
             </div>
-            <div className="flex flex-wrap gap-4 text-sm text-zinc-400">
+            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
               <div className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> {booking.userPhone}</div>
               <div className="flex items-center gap-1.5"><Scissors className="h-3.5 w-3.5" /> {booking.serviceName}</div>
             </div>
           </div>
 
-          <div className="flex gap-8 items-center bg-black/40 px-6 py-3 rounded-xl border border-zinc-800/50">
+          <div className="flex gap-8 items-center bg-muted/30 px-6 py-3 rounded-xl">
             <div className="text-center">
-              <p className="text-[10px] uppercase font-bold text-zinc-500 mb-1">Date</p>
-              <div className="flex items-center gap-2 font-bold">
+              <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Date</p>
+              <div className="flex items-center gap-2 font-bold text-sm">
                 <Calendar className="h-3.5 w-3.5 text-primary" />
                 {booking.requestedSlotDateTime ? format(parseISO(booking.requestedSlotDateTime), "MMM d, yyyy") : 'N/A'}
               </div>
             </div>
-            <div className="w-px h-8 bg-zinc-800" />
             <div className="text-center">
-              <p className="text-[10px] uppercase font-bold text-zinc-500 mb-1">Time</p>
-              <div className="flex items-center gap-2 font-bold">
+              <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Time</p>
+              <div className="flex items-center gap-2 font-bold text-sm">
                 <Clock className="h-3.5 w-3.5 text-primary" />
                 {booking.requestedSlotDateTime ? format(parseISO(booking.requestedSlotDateTime), "p") : 'N/A'}
               </div>
@@ -312,12 +292,12 @@ function BookingCard({ booking, onAction, isHistory = false, showHistoryActions 
               {booking.status === 'Pending' ? (
                 <>
                   <Button onClick={() => onAction(booking.id, 'Accepted')} className="flex-1 md:w-28 bg-green-600 hover:bg-green-700">Accept</Button>
-                  <Button onClick={() => onAction(booking.id, 'Rejected')} variant="outline" className="flex-1 md:w-28 border-zinc-700">Reject</Button>
+                  <Button onClick={() => onAction(booking.id, 'Rejected')} variant="outline" className="flex-1 md:w-28">Reject</Button>
                 </>
               ) : showHistoryActions ? (
                 <>
                   <Button onClick={() => onAction(booking.id, 'Completed')} className="flex-1 md:w-28 bg-blue-600 hover:bg-blue-700">Mark Done</Button>
-                  <Button onClick={() => onAction(booking.id, 'NoShow')} variant="outline" className="flex-1 md:w-28 border-zinc-700 text-zinc-500 hover:text-zinc-300">No-Show</Button>
+                  <Button onClick={() => onAction(booking.id, 'NoShow')} variant="outline" className="flex-1 md:w-28">No-Show</Button>
                 </>
               ) : null}
             </div>

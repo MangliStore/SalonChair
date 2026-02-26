@@ -5,300 +5,80 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "Represents a user of the Salon Chair app, which can be a public user requesting appointments or a salon owner managing their shop. User registration requires a verified Gmail account.",
+      "description": "Represents a user of the Salon Chair app.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the User entity."
-        },
-        "email": {
-          "type": "string",
-          "description": "The user's email address, primarily a Gmail account, used for registration and communication.",
-          "format": "email"
-        },
-        "phoneNumber": {
-          "type": "string",
-          "description": "The user's phone number, used for SMS and WhatsApp notifications related to bookings and alerts."
-        },
-        "name": {
-          "type": "string",
-          "description": "The display name of the user or salon owner."
-        },
-        "isSalonOwner": {
-          "type": "boolean",
-          "description": "Indicates whether this user account has salon owner privileges, allowing them to manage a salon."
-        },
-        "noShowFlagsCount": {
-          "type": "number",
-          "description": "A cumulative count of no-show flags received by this user from salon owners."
-        },
-        "isBanned": {
-          "type": "boolean",
-          "description": "A boolean flag indicating if the user is currently banned due to accumulating too many no-show flags."
-        },
-        "registrationDateTime": {
-          "type": "string",
-          "description": "The date and time when the user registered on the Salon Chair platform.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "isSalonOwner": { "type": "boolean" },
+        "registrationDateTime": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "email",
-        "phoneNumber",
-        "isSalonOwner",
-        "noShowFlagsCount",
-        "isBanned",
-        "registrationDateTime"
-      ]
+      "required": ["id", "email", "isSalonOwner"]
     },
     "Salon": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Salon",
       "type": "object",
-      "description": "Represents a salon listed on the Salon Chair platform, managed by a salon owner. Includes details for discovery and administration.",
+      "description": "Represents a salon listed on the platform.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Salon entity."
-        },
-        "ownerId": {
-          "type": "string",
-          "description": "Reference to the User entity who owns and manages this salon. (Relationship: User 1:N Salon)"
-        },
-        "name": {
-          "type": "string",
-          "description": "The official business name of the salon."
-        },
-        "address": {
-          "type": "string",
-          "description": "The complete street address of the salon."
-        },
-        "landmark": {
-          "type": "string",
-          "description": "A prominent local landmark or recognizable point near the salon, crucial for local navigation."
-        },
-        "city": {
-          "type": "string",
-          "description": "The city where the salon is geographically located, used for filtering."
-        },
-        "state": {
-          "type": "string",
-          "description": "The state where the salon is geographically located, used for filtering."
-        },
-        "description": {
-          "type": "string",
-          "description": "An optional detailed description or profile of the salon, highlighting its offerings or ambiance."
-        },
-        "registrationDateTime": {
-          "type": "string",
-          "description": "The date and time when the salon formally registered on the platform.",
-          "format": "date-time"
-        },
-        "isAuthorized": {
-          "type": "boolean",
-          "description": "Whether the salon is verified by admin."
-        },
-        "isVisible": {
-          "type": "boolean",
-          "description": "A boolean flag indicating if the salon is publicly visible and available for bookings, controlled by subscription status and admin overrides."
-        },
-        "isPaid": {
-          "type": "boolean",
-          "description": "Whether the salon owner has an active subscription."
-        },
-        "subscriptionId": {
-          "type": "string",
-          "description": "Reference to the active Subscription entity for this salon. (Relationship: Salon 1:1 Subscription)"
-        }
-      },
-      "required": [
-        "id",
-        "ownerId",
-        "name",
-        "address",
-        "landmark",
-        "city",
-        "state",
-        "registrationDateTime",
-        "isVisible",
-        "subscriptionId"
-      ]
-    },
-    "Service": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Service",
-      "type": "object",
-      "description": "Represents a specific service offered by a salon, detailing its name, description, price, and estimated duration.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Service entity."
-        },
-        "salonId": {
-          "type": "string",
-          "description": "Reference to the Salon entity that offers this service. (Relationship: Salon 1:N Service)"
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the service (e.g., 'Haircut', 'Shaving', 'Facial')."
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief description explaining what the service entails."
-        },
-        "price": {
-          "type": "number",
-          "description": "The monetary price of the service."
-        },
-        "durationMinutes": {
-          "type": "number",
-          "description": "The estimated time required to complete the service, in minutes."
-        }
-      },
-      "required": [
-        "id",
-        "salonId",
-        "name",
-        "description",
-        "price",
-        "durationMinutes"
-      ]
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "name": { "type": "string" },
+        "city": { "type": "string" },
+        "state": { "type": "string" },
+        "isAuthorized": { "type": "boolean" },
+        "isPaid": { "type": "boolean" }
+      }
     },
     "Booking": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Booking",
       "type": "object",
-      "description": "Represents an appointment request made by a public user for one or more services at a salon, including its status and response details.",
+      "description": "Represents an appointment request.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Booking entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the User entity (public user) who initiated the booking request."
-        },
-        "userName": {
-          "type": "string",
-          "description": "Denormalized name of the user for display."
-        },
-        "userPhone": {
-          "type": "string",
-          "description": "Denormalized phone number of the user for contact."
-        },
-        "salonId": {
-          "type": "string",
-          "description": "Reference to the Salon entity where the booking is requested."
-        },
-        "salonName": {
-          "type": "string",
-          "description": "Denormalized name of the salon for display."
-        },
-        "salonOwnerId": {
-          "type": "string",
-          "description": "Denormalized owner ID of the salon for authorization and querying."
-        },
-        "serviceIds": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Array of service identifiers."
-        },
-        "serviceName": {
-          "type": "string",
-          "description": "Denormalized primary service name for quick display."
-        },
-        "requestedSlotDateTime": {
-          "type": "string",
-          "description": "The specific date and time slot requested.",
-          "format": "date-time"
-        },
-        "requestInitiatedDateTime": {
-          "type": "string",
-          "description": "The date and time when the booking request was placed.",
-          "format": "date-time"
-        },
-        "status": {
-          "type": "string",
-          "description": "Current status (Pending, Accepted, Rejected, etc.)."
-        },
-        "ownerResponseDateTime": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "createdAt": {
-          "type": "object",
-          "description": "Firestore server timestamp."
-        }
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "salonId": { "type": "string" },
+        "salonOwnerId": { "type": "string" },
+        "status": { "type": "string" }
+      }
+    },
+    "Message": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Message",
+      "type": "object",
+      "description": "A chat message between a user and a salon owner regarding a specific booking.",
+      "properties": {
+        "id": { "type": "string" },
+        "bookingId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "object" }
       },
-      "required": [
-        "id",
-        "userId",
-        "userName",
-        "salonId",
-        "salonName",
-        "salonOwnerId",
-        "requestedSlotDateTime",
-        "status"
-      ]
+      "required": ["bookingId", "senderId", "text", "timestamp"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous",
-      "google.com"
-    ]
+    "providers": ["google.com"]
   },
   "firestore": {
     "structure": [
       {
         "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "User profiles.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            }
-          ]
-        }
+        "definition": { "entityName": "User" }
       },
       {
         "path": "/salons/{salonId}",
-        "definition": {
-          "entityName": "Salon",
-          "schema": {
-            "$ref": "#/backend/entities/Salon"
-          },
-          "description": "Top-level collection for all salons.",
-          "params": [
-            {
-              "name": "salonId",
-              "description": "The unique identifier for a salon."
-            }
-          ]
-        }
+        "definition": { "entityName": "Salon" }
       },
       {
         "path": "/bookings/{bookingId}",
-        "definition": {
-          "entityName": "Booking",
-          "schema": {
-            "$ref": "#/backend/entities/Booking"
-          },
-          "description": "All booking requests.",
-          "params": [
-            {
-              "name": "bookingId",
-              "description": "The unique identifier for a booking."
-            }
-          ]
-        }
+        "definition": { "entityName": "Booking" }
+      },
+      {
+        "path": "/bookings/{bookingId}/messages/{messageId}",
+        "definition": { "entityName": "Message" }
       }
     ]
   }

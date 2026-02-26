@@ -3,7 +3,7 @@
 
 import { useEffect } from "react";
 import { Navbar } from "@/components/navbar";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -12,6 +12,7 @@ import { Calendar, Clock, Scissors, AlertCircle, Loader2, ChevronRight } from "l
 import { format, parseISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ChatDialog } from "@/components/chat-dialog";
 
 export default function MyBookings() {
   const { user, isUserLoading } = useUser();
@@ -26,8 +27,6 @@ export default function MyBookings() {
 
   const bookingsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
-    // Query filtered by userId to match security rules
-    // Removed orderBy to avoid requiring a composite index
     return query(
       collection(db, "bookings"),
       where("userId", "==", user.uid),
@@ -37,7 +36,6 @@ export default function MyBookings() {
 
   const { data: rawBookings, isLoading: isBookingsLoading, error } = useCollection(bookingsQuery);
   
-  // Client-side sorting as a safe fallback for missing indexes
   const bookings = rawBookings ? [...rawBookings].sort((a, b) => {
     const dateA = a.createdAt?.seconds || 0;
     const dateB = b.createdAt?.seconds || 0;
@@ -68,7 +66,7 @@ export default function MyBookings() {
               <h3 className="font-bold">Sync Error</h3>
             </div>
             <p className="text-sm opacity-90 leading-relaxed">
-              We encountered an issue fetching your bookings. This is usually due to a missing database index or a permission error.
+              We encountered an issue fetching your bookings.
             </p>
           </div>
         )}
@@ -89,16 +87,21 @@ export default function MyBookings() {
                           <Scissors className="h-4 w-4 text-primary" />
                           <h3 className="font-bold text-lg">{booking.salonName}</h3>
                         </div>
-                        <Badge 
-                          variant={
-                            booking.status === "Accepted" ? "default" : 
-                            booking.status === "Rejected" ? "destructive" : 
-                            "secondary"
-                          }
-                          className={booking.status === "Accepted" ? "bg-green-500 hover:bg-green-600" : ""}
-                        >
-                          {booking.status}
-                        </Badge>
+                        <div className="flex items-center gap-3">
+                          {booking.status === "Accepted" && (
+                            <ChatDialog bookingId={booking.id} recipientName="Salon" />
+                          )}
+                          <Badge 
+                            variant={
+                              booking.status === "Accepted" ? "default" : 
+                              booking.status === "Rejected" ? "destructive" : 
+                              "secondary"
+                            }
+                            className={booking.status === "Accepted" ? "bg-green-500 hover:bg-green-600" : ""}
+                          >
+                            {booking.status}
+                          </Badge>
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -120,14 +123,6 @@ export default function MyBookings() {
                         </div>
                       </div>
                     </div>
-                    {booking.status === "Accepted" && (
-                      <div className="bg-green-50 p-6 flex items-center justify-center border-t md:border-t-0 md:border-l border-green-100">
-                        <div className="text-center">
-                          <p className="text-xs font-bold text-green-700 uppercase tracking-wider mb-1">Confirmed</p>
-                          <p className="text-[10px] text-green-600 max-w-[120px]">Show this to the shop owner upon arrival.</p>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </Card>
               ))
@@ -145,22 +140,6 @@ export default function MyBookings() {
             )}
           </div>
         )}
-
-        <div className="mt-12 bg-primary/5 rounded-2xl p-6 border border-primary/10">
-          <div className="flex gap-4">
-            <div className="bg-primary/10 rounded-full p-3 h-fit">
-              <AlertCircle className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <h4 className="font-bold text-primary mb-1">Booking Policy</h4>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Please ensure you arrive at the salon 10 minutes before your scheduled slot. 
-                Failure to show up for a confirmed appointment may result in a "No-Show" flag. 
-                3 flags will result in a temporary ban from the platform.
-              </p>
-            </div>
-          </div>
-        </div>
       </main>
     </div>
   );
