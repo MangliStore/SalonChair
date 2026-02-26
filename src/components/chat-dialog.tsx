@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -79,7 +78,7 @@ export function ChatDialog({ bookingId, recipientName }: ChatDialogProps) {
 
         <div className="bg-amber-50 border-b border-amber-100 px-4 py-2 text-[11px] text-amber-800 flex items-center gap-2">
           <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-          <p className="font-medium">Notice: Do not share contact numbers. Visit/Come to the salon.</p>
+          <p className="font-medium">To maintain privacy, please refrain from sharing contact details and visit us directly at the salon.</p>
         </div>
         
         <ScrollArea className="flex-1 p-4">
