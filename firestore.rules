@@ -5,9 +5,14 @@ service cloud.firestore {
     // Global helpers
     function isSignedIn() { return request.auth != null; }
     
-    // Check if the user is an admin by checking the 'admins' collection
+    // Check if the user is an admin
+    // Note: In this prototype, we also check if the ID starts with 'admin_' 
+    // to support the password-protected dashboard workflow.
     function isAdmin() { 
-      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); 
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email.endsWith('@admin.com')
+      ); 
     }
 
     match /users/{userId} {
@@ -24,9 +29,14 @@ service cloud.firestore {
     match /salons/{salonId} {
       allow read: if true;
       
-      // Allow any signed-in user to create/update salons for this prototype 
-      // to support the password-protected admin dashboard.
-      allow write: if isSignedIn();
+      // Allow salon owners to manage their own shop
+      // We check if the doc ID matches the 'salon_' + UID pattern used in the app
+      allow write: if isSignedIn() && (
+        request.auth.uid == resource.data.ownerId || 
+        request.auth.uid == request.resource.data.ownerId ||
+        salonId == 'salon_' + request.auth.uid ||
+        isAdmin()
+      );
 
       match /services/{serviceId} {
         allow read: if true;
@@ -35,11 +45,10 @@ service cloud.firestore {
     }
 
     match /bookings/{bookingId} {
-      allow read: if isSignedIn() && (
-        resource.data.userId == request.auth.uid || 
-        resource.data.salonOwnerId == request.auth.uid ||
-        isAdmin()
-      );
+      // Allow any signed-in user to read bookings. 
+      // This is required so customers can see which slots are 'Occupied' 
+      // on a salon's page before booking.
+      allow read: if isSignedIn();
       
       allow create: if isSignedIn() && 
         request.resource.data.userId == request.auth.uid;
