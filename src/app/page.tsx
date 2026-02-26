@@ -22,7 +22,6 @@ import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebas
 import { collection, query, where } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
-// UPDATED: Now points to your custom image in the public folder
 const HERO_IMAGE_URL = "/hero-salon.png";
 
 export default function Home() {
@@ -41,14 +40,14 @@ export default function Home() {
 
   const salonsQuery = useMemoFirebase(() => {
     if (!db) return null;
-    return query(collection(db, "salons"), where("isPaid", "==", true));
+    return query(collection(db, "salons"), where("isPaid", "==", true), where("isAuthorized", "==", true));
   }, [db]);
 
   const { data: dbSalons, isLoading: isSalonsLoading } = useCollection(salonsQuery);
 
   const allSalons = useMemo(() => {
     const real = dbSalons || [];
-    return [...real, ...MOCK_SALONS];
+    return [...real, ...MOCK_SALONS.filter(s => s.isAuthorized && s.isPaid)];
   }, [dbSalons]);
 
   const cities = useMemo(() => {
@@ -61,8 +60,7 @@ export default function Home() {
                          salon.city.toLowerCase().includes(search.toLowerCase());
     const matchesState = stateFilter === "all" || salon.state === stateFilter;
     const matchesCity = cityFilter === "all" || salon.city === cityFilter;
-    const isVisible = salon.isPaid;
-    return matchesSearch && matchesState && matchesCity && isVisible;
+    return matchesSearch && matchesState && matchesCity;
   });
 
   const handleStateChange = (val: string) => {
@@ -161,58 +159,57 @@ export default function Home() {
 
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
           {filteredSalons.map((salon) => (
-            <Card key={salon.id} className="group overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
-              <div className="relative h-56 w-full">
-                <Image 
-                  src={salon.imageUrl || "https://picsum.photos/seed/salon1/600/400"} 
-                  alt={salon.name} 
-                  fill 
-                  className="object-cover transition-transform group-hover:scale-105"
-                />
-                <Badge className="absolute left-4 top-4 bg-primary text-white hover:bg-primary shadow-lg">
-                  Verified
-                </Badge>
-                <div className="absolute right-4 top-4 rounded-full bg-white/90 p-2 shadow-md">
-                   <Star className="h-4 w-4 fill-current text-yellow-500" />
+            <Link key={salon.id} href={`/salons/${salon.id}`} className="block group">
+              <Card className="overflow-hidden h-full transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+                <div className="relative h-56 w-full">
+                  <Image 
+                    src={salon.imageUrl || "https://picsum.photos/seed/salon1/600/400"} 
+                    alt={salon.name} 
+                    fill 
+                    className="object-cover transition-transform group-hover:scale-105"
+                  />
+                  <Badge className="absolute left-4 top-4 bg-primary text-white hover:bg-primary shadow-lg">
+                    Verified
+                  </Badge>
+                  <div className="absolute right-4 top-4 rounded-full bg-white/90 p-2 shadow-md">
+                     <Star className="h-4 w-4 fill-current text-yellow-500" />
+                  </div>
                 </div>
-              </div>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xl group-hover:text-primary transition-colors">{salon.name}</CardTitle>
-                <CardDescription className="flex items-center gap-1.5 text-sm">
-                  <MapPin className="h-4 w-4 text-primary" />
-                  {salon.landmark}, {salon.city}, {salon.state}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pb-4">
-                <div className="mb-4 flex flex-wrap gap-2">
-                  {salon.services?.slice(0, 3).map((s: any, idx: number) => (
-                    <Badge key={idx} variant="secondary" className="bg-muted text-[10px] font-normal">
-                      {s.name}
-                    </Badge>
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Clock className="h-3 w-3" /> Closes at 9:00 PM
-                </p>
-              </CardContent>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xl group-hover:text-primary transition-colors">{salon.name}</CardTitle>
+                  <CardDescription className="flex items-center gap-1.5 text-sm">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    {salon.landmark}, {salon.city}, {salon.state}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pb-4">
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    {salon.services?.slice(0, 3).map((s: any, idx: number) => (
+                      <Badge key={idx} variant="secondary" className="bg-muted text-[10px] font-normal">
+                        {s.name}
+                      </Badge>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Clock className="h-3 w-3" /> Closes at 9:00 PM
+                  </p>
+                </CardContent>
 
-              {/* FIXED SECTION: Added safety check for services to prevent crash */}
-              <CardFooter className="pt-0 border-t bg-muted/20 mt-4 px-6 py-4 flex justify-between items-center">
-                 <div className="flex flex-col">
-                    <span className="text-xs text-muted-foreground font-medium">Starts from</span>
-                    <span className="text-lg font-bold text-foreground">
-                      {salon.services && salon.services.length > 0 
-                        ? `₹${Math.min(...salon.services.map((s: any) => s.price))}`
-                        : "Price on request"}
-                    </span>
-                 </div>
-                 <Link href={`/salons/${salon.id}`}>
-                    <Button className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20">
-                      Book Now
-                    </Button>
-                 </Link>
-              </CardFooter>
-            </Card>
+                <CardFooter className="pt-0 border-t bg-muted/20 mt-auto px-6 py-4 flex justify-between items-center">
+                   <div className="flex flex-col">
+                      <span className="text-xs text-muted-foreground font-medium">Starts from</span>
+                      <span className="text-lg font-bold text-foreground">
+                        {salon.services && salon.services.length > 0 
+                          ? `₹${Math.min(...salon.services.map((s: any) => s.price))}`
+                          : "Price on request"}
+                      </span>
+                   </div>
+                   <Button className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 pointer-events-none">
+                     Book Now
+                   </Button>
+                </CardFooter>
+              </Card>
+            </Link>
           ))}
           {filteredSalons.length === 0 && (
             <div className="col-span-full py-20 text-center">

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -34,6 +33,7 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [isBooking, setIsBooking] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -41,7 +41,6 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
     }
   }, [user, isUserLoading, router]);
 
-  // Fetch Salon Details
   const salonRef = useMemoFirebase(() => {
     if (!db) return null;
     return doc(db, "salons", params.id);
@@ -54,7 +53,6 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
     return MOCK_SALONS.find(s => s.id === params.id) || null;
   }, [dbSalon, params.id]);
 
-  // Fetch Existing Bookings for this salon to prevent double booking
   const existingBookingsQuery = useMemoFirebase(() => {
     if (!db || !params.id) return null;
     return query(
@@ -66,7 +64,6 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
 
   const { data: existingBookings, isLoading: isBookingsLoading } = useCollection(existingBookingsQuery);
 
-  // Helper to check if a time slot is already occupied
   const occupiedSlots = useMemo(() => {
     if (!existingBookings || !date) return new Set();
     const dateStr = format(date, "yyyy-MM-dd");
@@ -91,7 +88,6 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
       return;
     }
 
-    // Double check availability before submitting
     if (occupiedSlots.has(selectedTime)) {
       toast({
         variant: "destructive",
@@ -137,6 +133,11 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
     } finally {
       setIsBooking(false);
     }
+  };
+
+  const handleDateSelect = (newDate: Date | undefined) => {
+    setDate(newDate);
+    setIsCalendarOpen(false); // Close the calendar window after selection
   };
 
   if (isUserLoading || isSalonLoading) {
@@ -256,7 +257,7 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
               <CardContent className="space-y-6">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">1. Choose Date</label>
-                  <Popover>
+                  <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                     <PopoverTrigger asChild>
                       <Button
                         variant={"outline"}
@@ -273,7 +274,7 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
                       <Calendar
                         mode="single"
                         selected={date}
-                        onSelect={setDate}
+                        onSelect={handleDateSelect}
                         disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
                         initialFocus
                       />
