@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -10,7 +9,7 @@ import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebas
 import { collection, query, where, limit } from "firebase/firestore";
 import { Calendar, Clock, Scissors, AlertCircle, Loader2, ChevronRight } from "lucide-react";
 import { format, parseISO, isBefore } from "date-fns";
-import Link from "link";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChatDialog } from "@/components/chat-dialog";
 
