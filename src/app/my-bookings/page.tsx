@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Navbar } from "@/components/navbar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where, limit } from "firebase/firestore";
 import { Calendar, Clock, Scissors, AlertCircle, Loader2, ChevronRight } from "lucide-react";
-import { format, parseISO } from "date-fns";
-import Link from "next/link";
+import { format, parseISO, isBefore } from "date-fns";
+import Link from "link";
 import { useRouter } from "next/navigation";
 import { ChatDialog } from "@/components/chat-dialog";
 
@@ -18,6 +18,13 @@ export default function MyBookings() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const router = useRouter();
+  const [now, setNow] = useState(new Date());
+
+  // Update "now" periodically to handle real-time expiration
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -78,54 +85,60 @@ export default function MyBookings() {
         ) : (
           <div className="space-y-4">
             {bookings && bookings.length > 0 ? (
-              bookings.map((booking: any) => (
-                <Card key={booking.id} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex flex-col md:flex-row">
-                    <div className="p-6 flex-1">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                          <Scissors className="h-4 w-4 text-primary" />
-                          <h3 className="font-bold text-lg">{booking.salonName}</h3>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {booking.status === "Accepted" && (
-                            <ChatDialog bookingId={booking.id} recipientName="Salon" />
-                          )}
-                          <Badge 
-                            variant={
-                              booking.status === "Accepted" ? "default" : 
-                              booking.status === "Rejected" ? "destructive" : 
-                              "secondary"
-                            }
-                            className={booking.status === "Accepted" ? "bg-green-500 hover:bg-green-600" : ""}
-                          >
-                            {booking.status}
-                          </Badge>
-                        </div>
-                      </div>
+              bookings.map((booking: any) => {
+                const isExpired = booking.requestedSlotDateTime 
+                  ? isBefore(parseISO(booking.requestedSlotDateTime), now) 
+                  : false;
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Scissors className="h-4 w-4" />
-                          <span className="font-medium text-foreground">{booking.serviceName}</span>
+                return (
+                  <Card key={booking.id} className={`overflow-hidden shadow-sm hover:shadow-md transition-shadow ${isExpired ? 'opacity-70 grayscale-[0.5]' : ''}`}>
+                    <div className="flex flex-col md:flex-row">
+                      <div className="p-6 flex-1">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-2">
+                            <Scissors className="h-4 w-4 text-primary" />
+                            <h3 className="font-bold text-lg">{booking.salonName}</h3>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {!isExpired && booking.status === "Accepted" && (
+                              <ChatDialog bookingId={booking.id} recipientName="Salon" />
+                            )}
+                            <Badge 
+                              variant={
+                                booking.status === "Accepted" ? "default" : 
+                                booking.status === "Rejected" ? "destructive" : 
+                                "secondary"
+                              }
+                              className={booking.status === "Accepted" ? "bg-green-500 hover:bg-green-600" : ""}
+                            >
+                              {isExpired ? "Past Appointment" : booking.status}
+                            </Badge>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Calendar className="h-4 w-4" />
-                          <span className="font-medium text-foreground">
-                            {booking.requestedSlotDateTime ? format(parseISO(booking.requestedSlotDateTime), "PPP") : "Date TBD"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Clock className="h-4 w-4" />
-                          <span className="font-medium text-foreground">
-                            {booking.requestedSlotDateTime ? format(parseISO(booking.requestedSlotDateTime), "p") : "Time TBD"}
-                          </span>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Scissors className="h-4 w-4" />
+                            <span className="font-medium text-foreground">{booking.serviceName}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Calendar className="h-4 w-4" />
+                            <span className="font-medium text-foreground">
+                              {booking.requestedSlotDateTime ? format(parseISO(booking.requestedSlotDateTime), "PPP") : "Date TBD"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Clock className="h-4 w-4" />
+                            <span className="font-medium text-foreground">
+                              {booking.requestedSlotDateTime ? format(parseISO(booking.requestedSlotDateTime), "p") : "Time TBD"}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </Card>
-              ))
+                  </Card>
+                );
+              })
             ) : (
               <div className="text-center py-20 border-2 border-dashed rounded-2xl bg-muted/20">
                 <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />

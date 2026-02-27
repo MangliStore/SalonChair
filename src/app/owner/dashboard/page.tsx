@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Navbar } from "@/components/navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,8 @@ import {
   CheckCircle2,
   Clock,
   Calendar,
-  Phone
+  Phone,
+  AlertCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -39,7 +40,7 @@ import { collection, query, where, doc, serverTimestamp, limit } from "firebase/
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { INDIA_DATA, INDIA_STATES } from "@/app/lib/india-data";
 import Link from "next/link";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isBefore } from "date-fns";
 import { cn } from "@/lib/utils";
 import { ChatDialog } from "@/components/chat-dialog";
 
@@ -47,9 +48,16 @@ export default function OwnerDashboard() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
+  const [now, setNow] = useState(new Date());
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Update "now" periodically
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   const salonsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -147,7 +155,7 @@ export default function OwnerDashboard() {
               </div>
               <div className="flex gap-3">
                 <Button variant="outline" onClick={openEditModal}>Edit Profile</Button>
-                <Button>Renew Subscription</Button>
+                <Link href="/dashboard"><Button>Renew Subscription</Button></Link>
               </div>
             </div>
 
@@ -161,7 +169,7 @@ export default function OwnerDashboard() {
               <TabsContent value="new" className="space-y-4">
                 {bookings.filter(b => b.status === 'Pending').length > 0 ? (
                   bookings.filter(b => b.status === 'Pending').map(b => (
-                    <BookingCard key={b.id} booking={b} onAction={handleBookingAction} />
+                    <BookingCard key={b.id} booking={b} onAction={handleBookingAction} now={now} />
                   ))
                 ) : (
                   <div className="py-20 text-center border-2 border-dashed rounded-xl text-muted-foreground">
@@ -174,7 +182,7 @@ export default function OwnerDashboard() {
               <TabsContent value="confirmed" className="space-y-4">
                 {bookings.filter(b => b.status === 'Accepted').length > 0 ? (
                   bookings.filter(b => b.status === 'Accepted').map(b => (
-                    <BookingCard key={b.id} booking={b} onAction={handleBookingAction} showHistoryActions />
+                    <BookingCard key={b.id} booking={b} onAction={handleBookingAction} showHistoryActions now={now} />
                   ))
                 ) : (
                   <div className="py-20 text-center border-2 border-dashed rounded-xl text-muted-foreground">
@@ -187,7 +195,7 @@ export default function OwnerDashboard() {
               <TabsContent value="history" className="space-y-4">
                 {bookings.length > 0 ? (
                   bookings.map(b => (
-                    <BookingCard key={b.id} booking={b} onAction={handleBookingAction} isHistory />
+                    <BookingCard key={b.id} booking={b} onAction={handleBookingAction} isHistory now={now} />
                   ))
                 ) : (
                   <div className="py-20 text-center border-2 border-dashed rounded-xl text-muted-foreground">
@@ -236,11 +244,12 @@ export default function OwnerDashboard() {
   );
 }
 
-function BookingCard({ booking, onAction, isHistory = false, showHistoryActions = false }: { 
+function BookingCard({ booking, onAction, isHistory = false, showHistoryActions = false, now }: { 
   booking: any, 
   onAction: (id: string, action: string) => void,
   isHistory?: boolean,
-  showHistoryActions?: boolean
+  showHistoryActions?: boolean,
+  now: Date
 }) {
   const statusColors: any = {
     'Pending': 'bg-yellow-100 text-yellow-700 border-yellow-200',
@@ -250,8 +259,12 @@ function BookingCard({ booking, onAction, isHistory = false, showHistoryActions 
     'Completed': 'bg-blue-100 text-blue-700 border-blue-200',
   };
 
+  const isExpired = booking.requestedSlotDateTime 
+    ? isBefore(parseISO(booking.requestedSlotDateTime), now) 
+    : false;
+
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-shadow">
+    <Card className={cn("overflow-hidden hover:shadow-md transition-shadow", isExpired && "opacity-75 grayscale-[0.2]")}>
       <div className="p-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="space-y-2 flex-1">
@@ -260,7 +273,10 @@ function BookingCard({ booking, onAction, isHistory = false, showHistoryActions 
               <Badge variant="outline" className={cn("text-[10px] font-bold uppercase", statusColors[booking.status])}>
                 {booking.status}
               </Badge>
-              {booking.status === "Accepted" && (
+              {isExpired && (
+                <Badge variant="destructive" className="text-[10px] font-bold uppercase">Time Passed</Badge>
+              )}
+              {!isExpired && booking.status === "Accepted" && (
                 <ChatDialog bookingId={booking.id} recipientName={booking.userName} />
               )}
             </div>
@@ -287,7 +303,7 @@ function BookingCard({ booking, onAction, isHistory = false, showHistoryActions 
             </div>
           </div>
 
-          {!isHistory && (
+          {!isHistory && !isExpired && (
             <div className="flex gap-2 w-full md:w-auto">
               {booking.status === 'Pending' ? (
                 <>
@@ -301,6 +317,12 @@ function BookingCard({ booking, onAction, isHistory = false, showHistoryActions 
                 </>
               ) : null}
             </div>
+          )}
+          
+          {isExpired && !isHistory && (
+             <div className="text-xs text-muted-foreground font-medium italic">
+               Slot expired. Move to history to manage.
+             </div>
           )}
         </div>
       </div>
