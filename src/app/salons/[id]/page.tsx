@@ -13,7 +13,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@
 import { doc, collection, addDoc, serverTimestamp, query, where } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { format, startOfDay, endOfDay, isToday, isBefore, parse } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -34,6 +34,13 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [isBooking, setIsBooking] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [now, setNow] = useState(new Date());
+
+  // Update current time every minute to keep time slot validation fresh
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -137,7 +144,8 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
 
   const handleDateSelect = (newDate: Date | undefined) => {
     setDate(newDate);
-    setIsCalendarOpen(false); // Close the calendar window after selection
+    setSelectedTime(null); // Reset time when date changes
+    setIsCalendarOpen(false);
   };
 
   if (isUserLoading || isSalonLoading) {
@@ -165,7 +173,20 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
     "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00"
   ];
 
-  const isSlotOccupied = (time: string) => occupiedSlots.has(time);
+  const isSlotUnavailable = (time: string) => {
+    // Check if slot is occupied by someone else
+    if (occupiedSlots.has(time)) return "occupied";
+
+    // Check if slot is in the past (if date is today)
+    if (date && isToday(date)) {
+      const [hours, minutes] = time.split(":").map(Number);
+      const slotTime = new Date(date);
+      slotTime.setHours(hours, minutes, 0, 0);
+      if (isBefore(slotTime, now)) return "past";
+    }
+
+    return null;
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -286,28 +307,32 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
                   <label className="text-sm font-medium">2. Choose Time</label>
                   <div className="grid grid-cols-3 gap-2">
                     {timeSlots.map((time) => {
-                      const occupied = isSlotOccupied(time);
+                      const reason = isSlotUnavailable(time);
+                      const isUnavailable = !!reason;
                       return (
                         <Button
                           key={time}
                           variant={selectedTime === time ? "default" : "outline"}
                           className={cn(
                             "h-10 text-xs",
-                            occupied && "opacity-50 cursor-not-allowed bg-muted text-muted-foreground border-dashed"
+                            isUnavailable && "opacity-50 cursor-not-allowed bg-muted text-muted-foreground border-dashed"
                           )}
-                          onClick={() => !occupied && setSelectedTime(time)}
-                          disabled={occupied}
+                          onClick={() => !isUnavailable && setSelectedTime(time)}
+                          disabled={isUnavailable}
                         >
                           {time}
-                          {occupied && " (X)"}
+                          {reason === "occupied" && " (X)"}
+                          {reason === "past" && " (Passed)"}
                         </Button>
                       );
                     })}
                   </div>
-                  {selectedTime && isSlotOccupied(selectedTime) && (
+                  {selectedTime && isSlotUnavailable(selectedTime) && (
                     <div className="flex items-center gap-2 text-destructive text-xs mt-2 font-medium">
-                      <AlertCircle className="h-3 w-3" />
-                      This chair is already booked. Please pick a different time.
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      {isSlotUnavailable(selectedTime) === "occupied" 
+                        ? "This chair is already booked. Please pick a different time." 
+                        : "This time slot has already passed."}
                     </div>
                   )}
                 </div>
@@ -331,14 +356,14 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
                 <Button 
                   className="w-full h-12 text-lg font-bold shadow-lg shadow-primary/20" 
                   onClick={handleBooking}
-                  disabled={isBooking || !selectedService || !selectedTime || isSlotOccupied(selectedTime!)}
+                  disabled={isBooking || !selectedService || !selectedTime || !!isSlotUnavailable(selectedTime!)}
                 >
                   {isBooking ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Booking...
                     </>
-                  ) : isSlotOccupied(selectedTime!) ? "Slot Taken" : "Confirm Request"}
+                  ) : selectedTime && isSlotUnavailable(selectedTime!) ? "Slot Unavailable" : "Confirm Request"}
                 </Button>
               </CardFooter>
             </Card>
