@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ShieldCheck, Building, Eye, EyeOff, Lock, Loader2, RefreshCcw, CheckCircle2, XCircle } from "lucide-react";
+import { ShieldCheck, Building, Eye, EyeOff, Lock, Loader2, RefreshCcw, CheckCircle2, XCircle, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, doc } from "firebase/firestore";
@@ -91,7 +91,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50">
       <Navbar />
       <main className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
@@ -105,30 +105,36 @@ export default function AdminDashboard() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <Card className="bg-primary text-white border-none shadow-xl">
+          <Card className="bg-primary text-white border-none shadow-xl rounded-3xl overflow-hidden relative">
+            <div className="absolute right-[-20px] top-[-20px] opacity-10">
+              <CreditCard className="h-32 w-32 rotate-12" />
+            </div>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-white/80">Est. Total Revenue</CardTitle>
+              <CardTitle className="text-sm font-medium text-white/80">Total Revenue</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold tracking-tighter">₹{revenue.toLocaleString()}</div>
+              <div className="text-4xl font-black tracking-tighter">₹{revenue.toLocaleString()}</div>
+              <p className="text-xs text-white/60 mt-2">From {salons.filter(s => s.isPaid).length} active subscriptions</p>
             </CardContent>
           </Card>
-          <Card className="shadow-lg border-none">
+          <Card className="shadow-lg border-none rounded-3xl">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Pending Approval</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold tracking-tighter text-orange-500">
+              <div className="text-4xl font-black tracking-tighter text-orange-500">
                 {salons.filter(s => !s.isAuthorized).length}
               </div>
+              <p className="text-xs text-muted-foreground mt-2">Waiting for landmark & ID check</p>
             </CardContent>
           </Card>
-          <Card className="shadow-lg border-none">
+          <Card className="shadow-lg border-none rounded-3xl">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Total Listed Shops</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-4xl font-bold tracking-tighter">{salons.length}</div>
+              <div className="text-4xl font-black tracking-tighter">{salons.length}</div>
+              <p className="text-xs text-muted-foreground mt-2">In the national registry</p>
             </CardContent>
           </Card>
         </div>
@@ -136,73 +142,89 @@ export default function AdminDashboard() {
         <div className="space-y-6">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-6 w-6 text-primary" />
-            <h2 className="text-2xl font-bold">Verification Queue</h2>
+            <h2 className="text-2xl font-bold text-gray-800">Verification Queue</h2>
           </div>
           
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-6">
             {isSalonsLoading ? (
               <div className="py-20 text-center">
                 <Loader2 className="h-10 w-10 animate-spin mx-auto text-primary" />
               </div>
             ) : salons.map(salon => (
-              <Card key={salon.id} className="overflow-hidden border-none shadow-md">
-                <div className="p-6">
-                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
-                        <Building className="h-6 w-6 text-muted-foreground" />
+              <Card key={salon.id} className="overflow-hidden border-none shadow-md rounded-3xl hover:shadow-xl transition-shadow bg-white">
+                <div className="p-8">
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="h-16 w-16 rounded-2xl bg-primary/5 flex items-center justify-center border border-primary/10">
+                        <Building className="h-8 w-8 text-primary" />
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold">{salon.name || "Untitled Salon"}</h3>
-                        <p className="text-xs text-muted-foreground font-mono">ID: {salon.id}</p>
+                        <h3 className="text-2xl font-black text-gray-900">{salon.name || "Untitled Salon"}</h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Verification Ref:</p>
+                          <Badge variant="outline" className="font-mono text-[10px] font-black border-primary/20 text-primary">
+                            SC_{salon.ownerId?.substring(0, 8)}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={salon.isAuthorized ? 'default' : 'secondary'} className={salon.isAuthorized ? 'bg-green-500' : 'bg-yellow-500'}>
+                    <div className="flex items-center gap-3">
+                      <Badge variant={salon.isAuthorized ? 'default' : 'secondary'} className={salon.isAuthorized ? 'bg-green-500 rounded-full' : 'bg-yellow-500 rounded-full'}>
                         {salon.isAuthorized ? 'Approved' : 'Pending Review'}
                       </Badge>
-                      <Badge variant={salon.isPaid ? 'default' : 'secondary'} className={salon.isPaid ? 'bg-blue-500' : 'bg-red-500'}>
+                      <Badge variant={salon.isPaid ? 'default' : 'secondary'} className={salon.isPaid ? 'bg-blue-500 rounded-full' : 'bg-red-500 rounded-full'}>
                         {salon.isPaid ? 'Paid' : 'Unpaid'}
                       </Badge>
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-muted/30 p-4 rounded-lg space-y-1">
-                      <p className="font-bold text-[10px] uppercase text-muted-foreground mb-2">Location & Landmark</p>
-                      <p className="text-sm font-medium">{salon.address}</p>
-                      <p className="text-sm text-primary font-bold">Landmark: {salon.landmark || "Not provided"}</p>
-                      <p className="text-sm text-muted-foreground">{salon.city}, {salon.state}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="bg-gray-50 p-6 rounded-[1.5rem] border border-gray-100">
+                      <p className="font-black text-[10px] uppercase text-gray-400 mb-3 tracking-widest">Location Details</p>
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold text-gray-800 leading-relaxed">{salon.address}</p>
+                        <div className="flex items-center gap-2 text-primary font-bold text-sm">
+                          <span className="bg-primary/10 px-2 py-0.5 rounded text-[10px] uppercase">Landmark</span>
+                          {salon.landmark || "Not provided"}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{salon.city}, {salon.state}</p>
+                      </div>
                     </div>
                     
-                    <div className="flex flex-wrap items-center justify-end gap-3">
-                      <Button 
-                        variant={salon.isAuthorized ? "outline" : "default"} 
-                        className={!salon.isAuthorized ? "bg-green-600 hover:bg-green-700 text-white" : ""}
-                        onClick={() => toggleAuthorization(salon.id, !salon.isAuthorized)}
-                      >
-                        {salon.isAuthorized ? (
-                          <><XCircle className="mr-2 h-4 w-4" /> Revoke Approval</>
-                        ) : (
-                          <><CheckCircle2 className="mr-2 h-4 w-4" /> Verify & Approve</>
-                        )}
-                      </Button>
-                      <Button 
-                        variant="secondary" 
-                        size="icon" 
-                        onClick={() => togglePayment(salon.id, !!salon.isPaid)}
-                        title="Toggle Payment Status"
-                      >
-                        {salon.isPaid ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
+                    <div className="flex flex-col justify-center items-end gap-4">
+                      <div className="flex gap-3 w-full">
+                        <Button 
+                          variant={salon.isAuthorized ? "outline" : "default"} 
+                          className={`flex-1 h-12 rounded-2xl font-bold ${!salon.isAuthorized ? "bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-100" : ""}`}
+                          onClick={() => toggleAuthorization(salon.id, !salon.isAuthorized)}
+                        >
+                          {salon.isAuthorized ? (
+                            <><XCircle className="mr-2 h-5 w-5" /> Revoke Approval</>
+                          ) : (
+                            <><CheckCircle2 className="mr-2 h-5 w-5" /> Verify & Approve</>
+                          )}
+                        </Button>
+                        <Button 
+                          variant="secondary" 
+                          className="h-12 w-12 rounded-2xl p-0"
+                          onClick={() => togglePayment(salon.id, !!salon.isPaid)}
+                          title="Toggle Payment Status"
+                        >
+                          {salon.isPaid ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </Button>
+                      </div>
+                      <p className="text-[10px] text-gray-400 font-bold italic">
+                        * Match the Payment Ref (SC_{salon.ownerId?.substring(0, 8)}) with your UPI history.
+                      </p>
                     </div>
                   </div>
                 </div>
               </Card>
             ))}
             {salons.length === 0 && !isSalonsLoading && (
-              <div className="py-20 text-center border-2 border-dashed rounded-xl text-muted-foreground">
-                No salons found in the registry.
+              <div className="py-20 text-center border-2 border-dashed rounded-3xl bg-white text-muted-foreground">
+                <Building className="h-12 w-12 mx-auto mb-4 opacity-10" />
+                <p className="font-bold">No salons found in the registry.</p>
               </div>
             )}
           </div>

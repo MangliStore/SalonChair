@@ -1,91 +1,144 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
-// Important: Use this exact import for Next.js
 import dynamic from 'next/dynamic';
 const QRCodeSVG = dynamic(() => import('qrcode.react').then(mod => mod.QRCodeSVG), { ssr: false }); 
-import { useUser, useFirestore } from "@/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
+import { doc } from "firebase/firestore";
 import { Navbar } from "@/components/navbar";
-import { QrCode, Loader2, CheckCircle } from "lucide-react";
+import { QrCode, Loader2, CheckCircle, ShieldCheck, CreditCard, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function Dashboard() {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const db = useFirestore();
-  const [salon, setSalon] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
+  
   // --- YOUR SETTINGS ---
-  const myUpiId = "7842831137@ybl"; // <-- CHANGE THIS
+  const myUpiId = "7842831137@ybl"; 
   const amount = "200";
   const businessName = "Salon Chair";
 
-  // Construct the UPI link only when user is available
+  const salonRef = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return doc(db, "salons", user.uid);
+  }, [db, user?.uid]);
+
+  const { data: salon, isLoading: isSalonLoading } = useDoc(salonRef);
+
+  // Construct the UPI link
   const upiUrl = user 
-    ? `upi://pay?pa=${myUpiId}&pn=${encodeURIComponent(businessName)}&am=${amount}&cu=INR&tn=Verify_${user.uid.substring(0, 8)}`
+    ? `upi://pay?pa=${myUpiId}&pn=${encodeURIComponent(businessName)}&am=${amount}&cu=INR&tn=SC_${user.uid.substring(0, 8)}`
     : "";
 
-  useEffect(() => {
-    async function fetchSalon() {
-      if (user && db) {
-        const docRef = doc(db, "salons", user.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) setSalon(docSnap.data());
-        setLoading(false);
-      }
-    }
-    fetchSalon();
-  }, [user, db]);
-
-  if (loading) return <div className="flex h-screen items-center justify-center"><Loader2 className="animate-spin" /></div>;
+  if (isUserLoading || isSalonLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="animate-spin h-8 w-8 text-primary" />
+          <p className="text-sm text-muted-foreground">Syncing subscription status...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50/50 flex flex-col">
       <Navbar />
-      <main className="container mx-auto px-4 py-10">
+      <main className="flex-1 container mx-auto px-4 py-12 flex flex-col items-center">
         
         {salon?.isPaid ? (
-          <div className="bg-green-50 border border-green-200 p-6 rounded-2xl flex items-center gap-4">
-            <CheckCircle className="text-green-600 w-8 h-8" />
-            <div>
-              <h2 className="text-lg font-bold text-green-900">Salon Verified</h2>
-              <p className="text-green-700">Your salon is live and visible to customers!</p>
+          <div className="max-w-md w-full bg-white border border-green-100 p-10 rounded-[2.5rem] shadow-xl text-center">
+            <div className="bg-green-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle className="text-green-600 w-10 h-10" />
             </div>
+            <h2 className="text-3xl font-extrabold text-gray-900 mb-2">Payment Active</h2>
+            <p className="text-gray-500 mb-8 leading-relaxed">
+              Your subscription is active. Your salon is currently visible in the marketplace.
+            </p>
+            <Link href="/owner/dashboard">
+              <Button size="lg" className="w-full rounded-2xl h-14 text-lg">
+                Go to Salon Dashboard <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
           </div>
         ) : (
-          <div className="max-w-2xl mx-auto">
-            <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 text-center">
-              <h2 className="text-2xl font-bold mb-4 flex items-center justify-center gap-2">
-                <QrCode className="text-primary" /> Activate Dashboard
-              </h2>
-              
-              <div className="bg-gray-50 inline-block p-6 rounded-2xl mb-6 border-2 border-dashed border-gray-200">
-                {/* THE QR CODE COMPONENT */}
-                {upiUrl ? (
-                  <QRCodeSVG 
-                    value={upiUrl} 
-                    size={200} 
-                    level="H" // High error correction
-                    includeMargin={true}
-                  />
-                ) : (
-                  <p>Generating QR...</p>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                <p className="text-gray-600">Scan with GPay / PhonePe / Paytm to pay <b>₹200</b></p>
-                <div className="bg-primary/10 text-primary py-2 px-4 rounded-full inline-block font-mono text-sm font-bold">
-                  Ref: Verify_{user?.uid?.substring(0, 8)}
-                </div>
-                <p className="text-xs text-gray-400 max-w-xs mx-auto">
-                  We use your unique Reference ID in the payment note to automatically verify your salon.
+          <div className="max-w-xl w-full">
+            <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl border border-gray-100 text-center space-y-8">
+              <div className="space-y-2">
+                <Badge className="bg-primary/10 text-primary hover:bg-primary/10 border-none px-4 py-1">
+                  Step 1: Activate Account
+                </Badge>
+                <h2 className="text-3xl font-black tracking-tight text-gray-900">
+                  Enable Your Salon Listing
+                </h2>
+                <p className="text-gray-500 max-w-sm mx-auto">
+                  Scan the unique QR code below to pay the one-time activation fee of ₹{amount}.
                 </p>
               </div>
+              
+              <div className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-primary to-accent rounded-[2rem] blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
+                <div className="relative bg-white p-8 rounded-[2rem] border-2 border-dashed border-gray-100 flex flex-col items-center justify-center">
+                  {upiUrl ? (
+                    <QRCodeSVG 
+                      value={upiUrl} 
+                      size={220} 
+                      level="H"
+                      includeMargin={false}
+                    />
+                  ) : (
+                    <div className="h-[220px] flex items-center justify-center">
+                      <Loader2 className="animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="mt-6 space-y-1">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pre-filled Amount</p>
+                    <p className="text-2xl font-black text-primary">₹{amount}.00</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 space-y-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-500 font-medium">Unique Ref ID:</span>
+                  <span className="font-mono font-black text-primary bg-white px-3 py-1 rounded-lg border shadow-sm">
+                    SC_{user?.uid?.substring(0, 8)}
+                  </span>
+                </div>
+                <div className="flex gap-3 text-left text-xs text-gray-400 leading-normal">
+                  <ShieldCheck className="h-5 w-5 shrink-0 text-primary" />
+                  <p>
+                    This Reference ID is embedded in the payment note. Our system uses this to identify your payment and activate your shop within 24 hours.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center gap-4 pt-4">
+                <div className="flex -space-x-2">
+                  <img src="https://picsum.photos/seed/gpay/40/40" className="w-8 h-8 rounded-full border-2 border-white" alt="GPay" />
+                  <img src="https://picsum.photos/seed/phonepe/40/40" className="w-8 h-8 rounded-full border-2 border-white" alt="PhonePe" />
+                  <img src="https://picsum.photos/seed/paytm/40/40" className="w-8 h-8 rounded-full border-2 border-white" alt="Paytm" />
+                </div>
+                <p className="text-xs font-bold text-gray-400">Accepted on all UPI apps</p>
+              </div>
             </div>
+            
+            <p className="mt-8 text-center text-sm text-muted-foreground">
+              Already paid? <Link href="/owner/dashboard" className="text-primary font-bold hover:underline">Check verification status</Link>
+            </p>
           </div>
         )}
       </main>
     </div>
+  );
+}
+
+function Badge({ children, className }: { children: React.ReactNode, className?: string }) {
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${className}`}>
+      {children}
+    </span>
   );
 }
