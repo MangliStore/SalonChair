@@ -14,15 +14,16 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Star, Scissors, Clock, SearchX, Loader2 } from "lucide-react";
+import { MapPin, Star, Scissors, Clock, SearchX, Loader2, MessageSquarePlus } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 import { useRouter } from "next/navigation";
+import { FeedbackDialog } from "@/components/feedback-dialog";
 
-const HERO_IMAGE_URL = "/hero-salon.png";
+const HERO_IMAGE_URL = "https://picsum.photos/seed/salonhero/1200/600";
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -47,6 +48,7 @@ export default function Home() {
 
   const allSalons = useMemo(() => {
     const real = dbSalons || [];
+    // Only show mock salons that are "verified" to keep the experience clean
     return [...real, ...MOCK_SALONS.filter(s => s.isAuthorized && s.isPaid)];
   }, [dbSalons]);
 
@@ -89,10 +91,9 @@ export default function Home() {
             src={HERO_IMAGE_URL} 
             alt="Salon Hero" 
             fill 
-            className="object-cover"
+            className="object-cover opacity-60"
             priority
           />
-          <div className="absolute inset-0 bg-black/40" />
         </div>
         
         <div className="container relative z-10 px-4 py-20 text-center">
@@ -139,7 +140,7 @@ export default function Home() {
                 </SelectContent>
               </Select>
               
-              <Button className="h-12 px-8 bg-primary hover:bg-primary/90 text-white font-bold">
+              <Button className="h-12 px-8 bg-primary hover:bg-primary/90 text-white font-bold rounded-lg transition-all active:scale-95">
                 Search
               </Button>
             </div>
@@ -160,7 +161,7 @@ export default function Home() {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
           {filteredSalons.map((salon) => (
             <Link key={salon.id} href={`/salons/${salon.id}`} className="block group">
-              <Card className="overflow-hidden h-full transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+              <Card className="overflow-hidden h-full transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 rounded-[2rem] border-primary/5">
                 <div className="relative h-56 w-full">
                   <Image 
                     src={salon.imageUrl || "https://picsum.photos/seed/salon1/600/400"} 
@@ -168,7 +169,7 @@ export default function Home() {
                     fill 
                     className="object-cover transition-transform group-hover:scale-105"
                   />
-                  <Badge className="absolute left-4 top-4 bg-primary text-white hover:bg-primary shadow-lg">
+                  <Badge className="absolute left-4 top-4 bg-primary text-white hover:bg-primary shadow-lg rounded-full px-3">
                     Verified
                   </Badge>
                   <div className="absolute right-4 top-4 rounded-full bg-white/90 p-2 shadow-md">
@@ -176,16 +177,16 @@ export default function Home() {
                   </div>
                 </div>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-xl group-hover:text-primary transition-colors">{salon.name}</CardTitle>
+                  <CardTitle className="text-xl group-hover:text-primary transition-colors font-bold">{salon.name}</CardTitle>
                   <CardDescription className="flex items-center gap-1.5 text-sm">
                     <MapPin className="h-4 w-4 text-primary" />
-                    {salon.landmark}, {salon.city}, {salon.state}
+                    {salon.landmark ? `${salon.landmark}, ` : ""}{salon.city}, {salon.state}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pb-4">
                   <div className="mb-4 flex flex-wrap gap-2">
                     {salon.services?.slice(0, 3).map((s: any, idx: number) => (
-                      <Badge key={idx} variant="secondary" className="bg-muted text-[10px] font-normal">
+                      <Badge key={idx} variant="secondary" className="bg-muted text-[10px] font-medium rounded-lg">
                         {s.name}
                       </Badge>
                     ))}
@@ -197,14 +198,14 @@ export default function Home() {
 
                 <CardFooter className="pt-0 border-t bg-muted/20 mt-auto px-6 py-4 flex justify-between items-center">
                    <div className="flex flex-col">
-                      <span className="text-xs text-muted-foreground font-medium">Starts from</span>
-                      <span className="text-lg font-bold text-foreground">
+                      <span className="text-xs text-muted-foreground font-medium uppercase tracking-tighter">Starts from</span>
+                      <span className="text-lg font-black text-primary">
                         {salon.services && salon.services.length > 0 
                           ? `₹${Math.min(...salon.services.map((s: any) => s.price))}`
                           : "Price on request"}
                       </span>
                    </div>
-                   <Button className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 pointer-events-none">
+                   <Button className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 rounded-xl font-bold">
                      Book Now
                    </Button>
                 </CardFooter>
@@ -212,7 +213,7 @@ export default function Home() {
             </Link>
           ))}
           {filteredSalons.length === 0 && (
-            <div className="col-span-full py-20 text-center">
+            <div className="col-span-full py-20 text-center bg-muted/20 rounded-[3rem] border-2 border-dashed">
               <SearchX className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
               <h3 className="text-xl font-semibold">No salons found</h3>
               <p className="text-muted-foreground">Try adjusting your search or filters.</p>
@@ -221,13 +222,22 @@ export default function Home() {
         </div>
       </main>
 
-      <footer className="border-t bg-card mt-20 py-16">
+      <footer className="border-t bg-white mt-20 py-16">
         <div className="container mx-auto px-4 text-center">
           <div className="flex justify-center items-center gap-2 font-headline text-2xl font-bold text-primary mb-6">
             <Scissors className="h-6 w-6 text-primary" />
             Salon Chair
           </div>
-          <p className="text-muted-foreground mb-8">© 2026 Salon Chair Marketplace.</p>
+          <p className="text-muted-foreground mb-8">© 2026 Salon Chair Marketplace. Built for style.</p>
+          
+          <div className="flex flex-col items-center gap-4">
+            <FeedbackDialog trigger={
+              <button className="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors flex items-center gap-2 group bg-gray-50 px-6 py-3 rounded-full border border-gray-100 hover:border-primary/20">
+                <MessageSquarePlus className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+                Have a problem or idea? Share Complain/Suggestion
+              </button>
+            } />
+          </div>
         </div>
       </footer>
     </div>

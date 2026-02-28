@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { useUser, useAuth } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
+import { FeedbackDialog } from "@/components/feedback-dialog";
 
 export function Navbar() {
-  const { user } = useUser();
+  const { user } = userAuth();
   const auth = useAuth();
   const { toast } = useToast();
 
@@ -28,6 +29,11 @@ export function Navbar() {
     }
   };
 
+  // Wrapper for useUser hook to maintain backward compatibility with previous snippets
+  function userAuth() {
+    return useUser();
+  }
+
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
@@ -37,7 +43,11 @@ export function Navbar() {
           </div>
           Salon Chair
         </Link>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <div className="hidden lg:block">
+            <FeedbackDialog />
+          </div>
+
           {user && (
             <Link href="/my-bookings">
               <Button variant="ghost" size="sm" className="hidden sm:flex gap-2">
@@ -56,12 +66,12 @@ export function Navbar() {
           
           {user ? (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground hidden md:inline">
+              <span className="text-sm text-muted-foreground hidden md:inline max-w-[150px] truncate">
                 {user.displayName || user.email}
               </span>
               <Button variant="outline" size="sm" className="gap-2" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4" />
-                Sign Out
+                <span className="hidden xs:inline">Sign Out</span>
               </Button>
             </div>
           ) : (
