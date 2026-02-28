@@ -55,11 +55,6 @@ export default function OwnerDashboard() {
   const { toast } = useToast();
   const [now, setNow] = useState(new Date());
 
-  // --- PAYMENT SETTINGS ---
-  const myUpiId = "7842831137@ybl"; 
-  const amount = "200";
-  const businessName = "Salon Chair";
-
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -75,10 +70,6 @@ export default function OwnerDashboard() {
 
   const { data: salons, isLoading: isSalonLoading } = useCollection(salonsQuery);
   const mySalon = salons?.[0] || null;
-
-  const upiUrl = user 
-    ? `upi://pay?pa=${myUpiId}&pn=${encodeURIComponent(businessName)}&am=${amount}&cu=INR&tn=SC_${user.uid.substring(0, 8)}`
-    : "";
 
   const bookingsQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
@@ -106,7 +97,7 @@ export default function OwnerDashboard() {
   const handleUpdateSalon = async () => {
     if (!user || !db) return;
     setIsSubmitting(true);
-    const salonId = mySalon?.id || `salon_${user.uid}`;
+    const salonId = mySalon?.id || user.uid; // Using UID as ID for consistency
     const salonRef = doc(db, "salons", salonId);
 
     const payload = {
@@ -115,7 +106,7 @@ export default function OwnerDashboard() {
       ownerId: user.uid,
       updatedAt: serverTimestamp(),
       isAuthorized: mySalon ? (mySalon.isAuthorized ?? false) : false,
-      isPaid: mySalon ? (mySalon.isPaid ?? false) : false, // Default to false for new
+      isPaid: mySalon ? (mySalon.isPaid ?? false) : false,
       isVisible: true,
       registrationDateTime: mySalon?.registrationDateTime || new Date().toISOString(),
     };
@@ -123,7 +114,7 @@ export default function OwnerDashboard() {
     setDocumentNonBlocking(salonRef, payload, { merge: true });
     updateDocumentNonBlocking(doc(db, "users", user.uid), { isSalonOwner: true });
 
-    toast({ title: "Shop Profile Saved", description: "Your details have been submitted. Please ensure payment is complete for verification." });
+    toast({ title: "Shop Profile Saved", description: "Your details have been submitted. Make sure to complete activation." });
     setIsEditModalOpen(false);
     setIsSubmitting(false);
   };
@@ -145,82 +136,33 @@ export default function OwnerDashboard() {
       <Navbar />
       <main className="container mx-auto px-4 py-8 max-w-6xl">
         
-        {/* Payment Required Section */}
         {(!mySalon || !mySalon.isPaid) && (
-          <div className="mb-12 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center bg-white p-8 md:p-12 rounded-[2.5rem] shadow-xl border border-primary/10">
-            <div className="space-y-6">
-              <Badge className="bg-primary/10 text-primary hover:bg-primary/10 border-none px-4 py-1">
-                Account Activation Required
-              </Badge>
-              <h1 className="text-4xl font-black tracking-tight text-gray-900 leading-tight">
-                Get Your Salon Live <br/><span className="text-primary">in 24 Hours</span>
-              </h1>
-              <p className="text-gray-500 text-lg">
-                To list your shop in our marketplace, a one-time activation fee of ₹{amount} is required. Our admin will verify your payment and shop details manually.
-              </p>
-              
-              <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 space-y-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-500 font-medium">Your Unique Ref ID:</span>
-                  <span className="font-mono font-black text-primary bg-white px-3 py-1 rounded-lg border shadow-sm">
-                    SC_{user.uid.substring(0, 8)}
-                  </span>
-                </div>
-                <div className="flex gap-3 text-left text-xs text-gray-400 leading-normal">
-                  <ShieldCheck className="h-5 w-5 shrink-0 text-primary" />
-                  <p>
-                    This ID is embedded in the payment. Admin will use this to verify your shop once payment is received.
-                  </p>
-                </div>
-              </div>
-
-              {!mySalon ? (
-                <Button size="lg" className="w-full h-14 rounded-2xl text-lg gap-2" onClick={openEditModal}>
-                  <Store className="h-5 w-5" /> First, Setup Your Shop Details
-                </Button>
-              ) : (
-                <div className="flex items-center gap-2 text-primary font-bold">
-                  <CheckCircle2 className="h-5 w-5" /> Shop details submitted. Waiting for payment.
-                </div>
-              )}
+          <div className="mb-8 bg-white p-6 rounded-3xl shadow-lg border border-primary/10 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="space-y-2">
+              <h2 className="text-xl font-bold text-gray-900">Activation Required</h2>
+              <p className="text-sm text-muted-foreground">Your salon is currently hidden from the marketplace. Complete your payment to go live.</p>
             </div>
-
-            <div className="flex flex-col items-center justify-center space-y-4">
-              <div className="relative group bg-white p-6 rounded-[2.5rem] border-2 border-dashed border-primary/20 shadow-inner">
-                {upiUrl ? (
-                  <QRCodeSVG 
-                    value={upiUrl} 
-                    size={240} 
-                    level="H"
-                    includeMargin={false}
-                  />
-                ) : (
-                  <div className="h-[240px] w-[240px] flex items-center justify-center">
-                    <Loader2 className="animate-spin text-muted-foreground" />
-                  </div>
-                )}
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-black text-gray-900">₹{amount}.00</p>
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Pre-filled Amount</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <img src="https://picsum.photos/seed/gpay/40/40" className="w-8 h-8 rounded-full border border-gray-100" alt="GPay" />
-                <img src="https://picsum.photos/seed/phonepe/40/40" className="w-8 h-8 rounded-full border border-gray-100" alt="PhonePe" />
-                <img src="https://picsum.photos/seed/paytm/40/40" className="w-8 h-8 rounded-full border border-gray-100" alt="Paytm" />
-                <span className="text-[10px] font-bold text-gray-400">UPI Accepted</span>
-              </div>
+            <div className="flex gap-3">
+              <Link href="/dashboard">
+                <Button className="rounded-xl h-12 px-8 font-bold gap-2">
+                  <CreditCard className="h-4 w-4" /> View Payment QR Code
+                </Button>
+              </Link>
+              {!mySalon && (
+                <Button variant="outline" className="rounded-xl h-12 px-8" onClick={openEditModal}>
+                  Setup Shop Profile
+                </Button>
+              )}
             </div>
           </div>
         )}
 
-        {/* Dashboard Content (Visible only if paid or partially active) */}
         {mySalon && (
           <>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100">
               <div>
                 <div className="flex items-center gap-3 mb-1">
-                  <h1 className="text-3xl font-bold">{mySalon.name}</h1>
+                  <h1 className="text-3xl font-bold">{mySalon.name || "Untitled Salon"}</h1>
                   {mySalon.isAuthorized && mySalon.isPaid ? (
                     <Badge className="bg-green-600 rounded-full">Verified & Live</Badge>
                   ) : !mySalon.isPaid ? (
@@ -229,14 +171,14 @@ export default function OwnerDashboard() {
                     <Badge variant="secondary" className="rounded-full">Pending Verification</Badge>
                   )}
                 </div>
-                <p className="text-muted-foreground">{mySalon.city}, {mySalon.state}</p>
+                <p className="text-muted-foreground">{mySalon.city || "Setup city"}, {mySalon.state || "Setup state"}</p>
               </div>
               <div className="flex gap-3">
                 <Button variant="outline" className="rounded-xl h-12 px-6" onClick={openEditModal}>Edit Profile</Button>
-                {!mySalon.isAuthorized && (
-                  <Badge variant="outline" className="border-primary/20 text-primary bg-primary/5 h-12 px-6 flex items-center rounded-xl">
-                    Verification in Progress
-                  </Badge>
+                {!mySalon.isPaid && (
+                   <Link href="/dashboard">
+                     <Button variant="default" className="bg-primary rounded-xl h-12 px-6">Pay & Activate</Button>
+                   </Link>
                 )}
               </div>
             </div>

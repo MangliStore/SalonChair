@@ -7,15 +7,16 @@ const QRCodeSVG = dynamic(() => import('qrcode.react').then(mod => mod.QRCodeSVG
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { Navbar } from "@/components/navbar";
-import { QrCode, Loader2, CheckCircle, ShieldCheck, CreditCard, ArrowRight } from "lucide-react";
+import { QrCode, Loader2, CheckCircle, ShieldCheck, CreditCard, ArrowRight, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
 
 export default function Dashboard() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   
-  // --- YOUR SETTINGS ---
+  // --- PAYMENT SETTINGS ---
   const myUpiId = "7842831137@ybl"; 
   const amount = "200";
   const businessName = "Salon Chair";
@@ -27,7 +28,7 @@ export default function Dashboard() {
 
   const { data: salon, isLoading: isSalonLoading } = useDoc(salonRef);
 
-  // Construct the UPI link
+  // Construct the UPI link with unique transaction note
   const upiUrl = user 
     ? `upi://pay?pa=${myUpiId}&pn=${encodeURIComponent(businessName)}&am=${amount}&cu=INR&tn=SC_${user.uid.substring(0, 8)}`
     : "";
@@ -37,7 +38,7 @@ export default function Dashboard() {
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-2">
           <Loader2 className="animate-spin h-8 w-8 text-primary" />
-          <p className="text-sm text-muted-foreground">Syncing subscription status...</p>
+          <p className="text-sm text-muted-foreground">Syncing activation status...</p>
         </div>
       </div>
     );
@@ -48,18 +49,18 @@ export default function Dashboard() {
       <Navbar />
       <main className="flex-1 container mx-auto px-4 py-12 flex flex-col items-center">
         
-        {salon?.isPaid ? (
+        {salon?.isPaid && salon?.isAuthorized ? (
           <div className="max-w-md w-full bg-white border border-green-100 p-10 rounded-[2.5rem] shadow-xl text-center">
             <div className="bg-green-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle className="text-green-600 w-10 h-10" />
             </div>
-            <h2 className="text-3xl font-extrabold text-gray-900 mb-2">Payment Active</h2>
+            <h2 className="text-3xl font-extrabold text-gray-900 mb-2">Account Active</h2>
             <p className="text-gray-500 mb-8 leading-relaxed">
-              Your subscription is active. Your salon is currently visible in the marketplace.
+              Your subscription is active and your salon is live in the marketplace.
             </p>
             <Link href="/owner/dashboard">
               <Button size="lg" className="w-full rounded-2xl h-14 text-lg">
-                Go to Salon Dashboard <ArrowRight className="ml-2 h-5 w-5" />
+                Go to Management Panel <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
           </div>
@@ -68,13 +69,13 @@ export default function Dashboard() {
             <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl border border-gray-100 text-center space-y-8">
               <div className="space-y-2">
                 <Badge className="bg-primary/10 text-primary hover:bg-primary/10 border-none px-4 py-1">
-                  Step 1: Activate Account
+                  {salon ? "Payment Pending" : "Step 1: Setup & Pay"}
                 </Badge>
                 <h2 className="text-3xl font-black tracking-tight text-gray-900">
-                  Enable Your Salon Listing
+                  Activate Your Salon
                 </h2>
                 <p className="text-gray-500 max-w-sm mx-auto">
-                  Scan the unique QR code below to pay the one-time activation fee of ₹{amount}.
+                  Scan this unique QR code to pay the one-time activation fee of ₹{amount}.
                 </p>
               </div>
               
@@ -102,7 +103,7 @@ export default function Dashboard() {
 
               <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 space-y-4">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-500 font-medium">Unique Ref ID:</span>
+                  <span className="text-gray-500 font-medium">Your Payment ID:</span>
                   <span className="font-mono font-black text-primary bg-white px-3 py-1 rounded-lg border shadow-sm">
                     SC_{user?.uid?.substring(0, 8)}
                   </span>
@@ -110,18 +111,27 @@ export default function Dashboard() {
                 <div className="flex gap-3 text-left text-xs text-gray-400 leading-normal">
                   <ShieldCheck className="h-5 w-5 shrink-0 text-primary" />
                   <p>
-                    This Reference ID is embedded in the payment note. Our system uses this to identify your payment and activate your shop within 24 hours.
+                    This ID is used by our admin to verify your payment. Your shop will be live within 24 hours of successful transaction.
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center justify-center gap-4 pt-4">
-                <div className="flex -space-x-2">
-                  <img src="https://picsum.photos/seed/gpay/40/40" className="w-8 h-8 rounded-full border-2 border-white" alt="GPay" />
-                  <img src="https://picsum.photos/seed/phonepe/40/40" className="w-8 h-8 rounded-full border-2 border-white" alt="PhonePe" />
-                  <img src="https://picsum.photos/seed/paytm/40/40" className="w-8 h-8 rounded-full border-2 border-white" alt="Paytm" />
+              <div className="flex flex-col gap-3">
+                {!salon && (
+                  <Link href="/owner/dashboard">
+                    <Button variant="outline" className="w-full h-12 rounded-xl gap-2">
+                      <Store className="h-4 w-4" /> Setup Shop Details First
+                    </Button>
+                  </Link>
+                )}
+                <div className="flex items-center justify-center gap-4 pt-4">
+                  <div className="flex -space-x-2">
+                    <img src="https://picsum.photos/seed/gpay/40/40" className="w-8 h-8 rounded-full border-2 border-white" alt="GPay" />
+                    <img src="https://picsum.photos/seed/phonepe/40/40" className="w-8 h-8 rounded-full border-2 border-white" alt="PhonePe" />
+                    <img src="https://picsum.photos/seed/paytm/40/40" className="w-8 h-8 rounded-full border-2 border-white" alt="Paytm" />
+                  </div>
+                  <p className="text-xs font-bold text-gray-400">Accepted on all UPI apps</p>
                 </div>
-                <p className="text-xs font-bold text-gray-400">Accepted on all UPI apps</p>
               </div>
             </div>
             
@@ -132,13 +142,5 @@ export default function Dashboard() {
         )}
       </main>
     </div>
-  );
-}
-
-function Badge({ children, className }: { children: React.ReactNode, className?: string }) {
-  return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${className}`}>
-      {children}
-    </span>
   );
 }

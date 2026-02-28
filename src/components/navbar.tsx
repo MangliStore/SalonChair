@@ -1,17 +1,27 @@
+
 "use client";
 
 import Link from "next/link";
 import { Scissors, User, Settings, LogOut, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useUser, useAuth } from "@/firebase";
+import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import { FeedbackDialog } from "@/components/feedback-dialog";
+import { doc } from "firebase/firestore";
 
 export function Navbar() {
-  const { user } = userAuth();
+  const { user } = useUser();
   const auth = useAuth();
+  const db = useFirestore();
   const { toast } = useToast();
+
+  const salonRef = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return doc(db, "salons", user.uid);
+  }, [db, user?.uid]);
+
+  const { data: salon } = useDoc(salonRef);
 
   const handleSignOut = async () => {
     try {
@@ -29,11 +39,6 @@ export function Navbar() {
     }
   };
 
-  // Wrapper for useUser hook to maintain backward compatibility with previous snippets
-  function userAuth() {
-    return useUser();
-  }
-
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
@@ -49,20 +54,22 @@ export function Navbar() {
           </div>
 
           {user && (
-            <Link href="/my-bookings">
-              <Button variant="ghost" size="sm" className="hidden sm:flex gap-2">
-                <Calendar className="h-4 w-4" />
-                My Bookings
-              </Button>
-            </Link>
+            <>
+              <Link href="/my-bookings">
+                <Button variant="ghost" size="sm" className="hidden sm:flex gap-2">
+                  <Calendar className="h-4 w-4" />
+                  My Bookings
+                </Button>
+              </Link>
+              
+              <Link href={salon?.isPaid && salon?.isAuthorized ? "/owner/dashboard" : "/dashboard"}>
+                <Button variant="ghost" size="sm" className="hidden sm:flex gap-2">
+                  <Settings className="h-4 w-4" />
+                  Salon Owner
+                </Button>
+              </Link>
+            </>
           )}
-
-          <Link href="/owner/dashboard">
-            <Button variant="ghost" size="sm" className="hidden sm:flex gap-2">
-              <Settings className="h-4 w-4" />
-              Salon Owner
-            </Button>
-          </Link>
           
           {user ? (
             <div className="flex items-center gap-2">
