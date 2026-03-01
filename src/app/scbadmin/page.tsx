@@ -23,13 +23,15 @@ import {
   User as UserIcon, 
   Mail, 
   Users,
-  Search
+  Search,
+  Clock
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, doc } from "firebase/firestore";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import Image from "next/image";
+import { format } from "date-fns";
 
 export default function AdminDashboard() {
   const { toast } = useToast();
@@ -58,7 +60,11 @@ export default function AdminDashboard() {
     return users.filter(u => 
       u.email?.toLowerCase().includes(userSearch.toLowerCase()) || 
       u.name?.toLowerCase().includes(userSearch.toLowerCase())
-    );
+    ).sort((a, b) => {
+      const timeA = a.lastLoginAt?.seconds || 0;
+      const timeB = b.lastLoginAt?.seconds || 0;
+      return timeB - timeA;
+    });
   }, [users, userSearch]);
 
   const handleLogin = (e: React.FormEvent) => {
@@ -326,9 +332,10 @@ export default function AdminDashboard() {
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="bg-gray-50/80 border-b">
-                          <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-widest">Full Name</th>
-                          <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-widest">Gmail Address</th>
-                          <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-widest text-center">Owner Status</th>
+                          <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-widest">User Profile</th>
+                          <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-widest">Gmail Account</th>
+                          <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-widest">Last Active</th>
+                          <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-widest text-center">Status</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -336,23 +343,29 @@ export default function AdminDashboard() {
                           <tr key={user.id} className="hover:bg-blue-50/30 transition-colors">
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
-                                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs shadow-inner">
                                   {user.name?.charAt(0) || "U"}
                                 </div>
-                                <span className="font-bold text-gray-900">{user.name || "Anonymous"}</span>
+                                <span className="font-bold text-gray-900">{user.name || "Anonymous User"}</span>
                               </div>
                             </td>
                             <td className="px-6 py-4">
                               <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                                <Mail className="h-3.5 w-3.5 text-primary opacity-50" />
                                 {user.email}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                                <Clock className="h-3 w-3" />
+                                {user.lastLoginAt ? format(user.lastLoginAt.toDate(), "MMM d, h:mm a") : "Legacy Account"}
                               </span>
                             </td>
                             <td className="px-6 py-4 text-center">
                               {user.isSalonOwner ? (
-                                <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none rounded-full px-4">Salon Owner</Badge>
+                                <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none rounded-full px-4 font-bold text-[10px]">SALON OWNER</Badge>
                               ) : (
-                                <Badge variant="outline" className="rounded-full px-4 text-gray-400 border-gray-200">Customer</Badge>
+                                <Badge variant="outline" className="rounded-full px-4 text-gray-400 border-gray-200 text-[10px] font-bold">CUSTOMER</Badge>
                               )}
                             </td>
                           </tr>

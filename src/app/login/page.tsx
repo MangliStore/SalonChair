@@ -29,22 +29,30 @@ export default function LoginPage() {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      // Initialize user profile in Firestore if it doesn't exist
+      // Update/Initialize user profile in Firestore
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
 
+      const baseUserData = {
+        email: user.email,
+        name: user.displayName || "New User",
+        phoneNumber: user.phoneNumber || "",
+        lastLoginAt: serverTimestamp(),
+      };
+
       if (!userSnap.exists()) {
         await setDoc(userRef, {
+          ...baseUserData,
           id: user.uid,
-          email: user.email,
-          name: user.displayName || "New User",
-          phoneNumber: user.phoneNumber || "",
           isSalonOwner: false,
           noShowFlagsCount: 0,
           isBanned: false,
           registrationDateTime: new Date().toISOString(),
           createdAt: serverTimestamp(),
         });
+      } else {
+        // Just update the login details for existing users
+        await setDoc(userRef, baseUserData, { merge: true });
       }
 
       toast({
