@@ -1,3 +1,28 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero",
+      "description": "Luxurious Salon Interior",
+      "imageUrl": "https://images.unsplash.com/photo-1560066984-138dadb4c035?q=80&w=1200&h=600&auto=format&fit=crop",
+      "imageHint": "salon interior"
+    },
+    {
+      "id": "salon-1",
+      "description": "Professional Barber Shop",
+      "imageUrl": "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=600&h=400&auto=format&fit=crop",
+      "imageHint": "barber shop"
+    },
+    {
+      "id": "salon-2",
+      "description": "Chic Hair Studio",
+      "imageUrl": "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?q=80&w=600&h=400&auto=format&fit=crop",
+      "imageHint": "hair studio"
+    },
+    {
+      "id": "salon-3",
+      "description": "Modern Spa",
+      "imageUrl": "https://images.unsplash.com/photo-1562322140-8baeececf3df?q=80&w=600&h=400&auto=format&fit=crop",
+      "imageHint": "spa beauty"
+    }
+  ]
 }
