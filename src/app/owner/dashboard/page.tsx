@@ -38,7 +38,8 @@ import {
   ShieldCheck,
   CreditCard,
   Image as ImageIcon,
-  Upload
+  Upload,
+  AlertCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -59,6 +60,7 @@ export default function OwnerDashboard() {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
 
   // --- PAYMENT SETTINGS ---
   const myUpiId = "7842831137@ybl"; 
@@ -111,22 +113,58 @@ export default function OwnerDashboard() {
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSalonForm(prev => ({ ...prev, imageUrl: reader.result as string }));
+    if (!file) return;
+
+    setIsProcessingImage(true);
+    const reader = new FileReader();
+    
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+
+        // Resize logic (max dimension 800px to stay well under 50KB)
+        const maxDim = 800;
+        if (width > height) {
+          if (width > maxDim) {
+            height *= maxDim / width;
+            width = maxDim;
+          }
+        } else {
+          if (height > maxDim) {
+            width *= maxDim / height;
+            height = maxDim;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Convert to JPG and compress heavily to hit < 50KB
+          // 0.6 quality at 800px is typically 30-45KB
+          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.6);
+          setSalonForm(prev => ({ ...prev, imageUrl: compressedDataUrl }));
+        }
+        setIsProcessingImage(false);
       };
-      reader.readAsDataURL(file);
-    }
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleUpdateSalon = async () => {
     if (!user || !db) return;
+    
     if (!salonForm.name || !salonForm.city || !salonForm.state || !salonForm.imageUrl) {
       toast({
         variant: "destructive",
         title: "Missing Information",
-        description: "Please fill in all required fields and upload an image.",
+        description: "Please fill in all required fields and upload a shop image.",
       });
       return;
     }
@@ -313,7 +351,7 @@ export default function OwnerDashboard() {
         <DialogContent className="max-w-2xl rounded-[2.5rem]">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">Edit Salon Profile</DialogTitle>
-            <DialogDescription>Details will be reviewed by admin for final approval. Image is mandatory.</DialogDescription>
+            <DialogDescription>Details will be reviewed by admin. Image is mandatory and will be optimized.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
@@ -342,7 +380,9 @@ export default function OwnerDashboard() {
               <Label>Salon Image *</Label>
               <div className="flex items-center gap-4">
                 <div className="relative h-24 w-24 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden bg-muted/50">
-                  {salonForm.imageUrl ? (
+                  {isProcessingImage ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  ) : salonForm.imageUrl ? (
                     <Image src={salonForm.imageUrl} alt="Preview" fill className="object-cover" />
                   ) : (
                     <ImageIcon className="h-8 w-8 text-muted-foreground opacity-30" />
@@ -355,15 +395,22 @@ export default function OwnerDashboard() {
                     className="hidden" 
                     id="salon-image-upload" 
                     onChange={handleImageUpload} 
+                    disabled={isProcessingImage}
                   />
                   <Label 
                     htmlFor="salon-image-upload" 
-                    className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary font-bold text-sm hover:bg-primary/20 transition-colors"
+                    className={cn(
+                      "cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary font-bold text-sm hover:bg-primary/20 transition-colors",
+                      isProcessingImage && "opacity-50 cursor-wait"
+                    )}
                   >
                     <Upload className="h-4 w-4" />
                     {salonForm.imageUrl ? "Change Image" : "Upload Image"}
                   </Label>
-                  <p className="text-[10px] text-muted-foreground mt-2">Recommended: Square image, max 2MB.</p>
+                  <div className="flex items-center gap-1.5 mt-2 text-[10px] text-muted-foreground">
+                    <AlertCircle className="h-3 w-3" />
+                    <span>Auto-converted to JPG and resized below 50KB.</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -380,7 +427,9 @@ export default function OwnerDashboard() {
           </div>
           <DialogFooter>
             <Button variant="outline" className="rounded-xl" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
-            <Button className="rounded-xl px-8" onClick={handleUpdateSalon} disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Profile'}</Button>
+            <Button className="rounded-xl px-8" onClick={handleUpdateSalon} disabled={isSubmitting || isProcessingImage}>
+              {isSubmitting ? 'Saving...' : 'Save Profile'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
