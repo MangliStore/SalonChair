@@ -8,11 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ShieldCheck, Building, Eye, EyeOff, Lock, Loader2, RefreshCcw, CheckCircle2, XCircle, CreditCard } from "lucide-react";
+import { ShieldCheck, Building, Eye, EyeOff, Lock, Loader2, RefreshCcw, CheckCircle2, XCircle, CreditCard, User, Mail, Image as ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, doc } from "firebase/firestore";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import Image from "next/image";
 
 export default function AdminDashboard() {
   const { toast } = useToast();
@@ -153,18 +154,30 @@ export default function AdminDashboard() {
             ) : salons.map(salon => (
               <Card key={salon.id} className="overflow-hidden border-none shadow-md rounded-3xl hover:shadow-xl transition-shadow bg-white">
                 <div className="p-8">
-                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="h-16 w-16 rounded-2xl bg-primary/5 flex items-center justify-center border border-primary/10">
-                        <Building className="h-8 w-8 text-primary" />
+                  <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-8 gap-6">
+                    <div className="flex items-center gap-6">
+                      <div className="relative h-24 w-24 rounded-3xl bg-primary/5 flex items-center justify-center border border-primary/10 overflow-hidden shadow-inner">
+                        {salon.imageUrl ? (
+                          <Image src={salon.imageUrl} alt={salon.name} fill className="object-cover" />
+                        ) : (
+                          <Building className="h-10 w-10 text-primary opacity-20" />
+                        )}
                       </div>
                       <div>
-                        <h3 className="text-2xl font-black text-gray-900">{salon.name || "Untitled Salon"}</h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Verification Ref:</p>
-                          <Badge variant="outline" className="font-mono text-[10px] font-black border-primary/20 text-primary">
-                            SC_{salon.ownerId?.substring(0, 8)}
-                          </Badge>
+                        <h3 className="text-3xl font-black text-gray-900 leading-tight">{salon.name || "Untitled Salon"}</h3>
+                        <div className="flex flex-wrap items-center gap-4 mt-2">
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground bg-gray-50 px-2 py-1 rounded-lg">
+                            <User className="h-3 w-3" /> {salon.ownerName || "Unknown"}
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground bg-gray-50 px-2 py-1 rounded-lg">
+                            <Mail className="h-3 w-3" /> {salon.ownerEmail || "No Email"}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Payment ID:</p>
+                            <Badge variant="outline" className="font-mono text-[10px] font-black border-primary/20 text-primary">
+                              SC_{salon.ownerId?.substring(0, 8)}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -180,7 +193,7 @@ export default function AdminDashboard() {
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="bg-gray-50 p-6 rounded-[1.5rem] border border-gray-100">
-                      <p className="font-black text-[10px] uppercase text-gray-400 mb-3 tracking-widest">Location Details</p>
+                      <p className="font-black text-[10px] uppercase text-gray-400 mb-3 tracking-widest">Location & Review</p>
                       <div className="space-y-2">
                         <p className="text-sm font-semibold text-gray-800 leading-relaxed">{salon.address}</p>
                         <div className="flex items-center gap-2 text-primary font-bold text-sm">
@@ -188,6 +201,12 @@ export default function AdminDashboard() {
                           {salon.landmark || "Not provided"}
                         </div>
                         <p className="text-xs text-muted-foreground">{salon.city}, {salon.state}</p>
+                        {salon.description && (
+                          <div className="mt-4 pt-4 border-t border-gray-200">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">About</p>
+                            <p className="text-xs text-gray-600 line-clamp-2 italic">{salon.description}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                     
@@ -213,8 +232,8 @@ export default function AdminDashboard() {
                           {salon.isPaid ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                         </Button>
                       </div>
-                      <p className="text-[10px] text-gray-400 font-bold italic">
-                        * Match the Payment Ref (SC_{salon.ownerId?.substring(0, 8)}) with your UPI history.
+                      <p className="text-[10px] text-gray-400 font-bold italic text-right">
+                        * Verify Payment Ref (SC_{salon.ownerId?.substring(0, 8)}) in UPI logs before approval.
                       </p>
                     </div>
                   </div>

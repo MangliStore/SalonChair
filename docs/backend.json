@@ -23,9 +23,12 @@
       "properties": {
         "id": { "type": "string" },
         "ownerId": { "type": "string" },
+        "ownerName": { "type": "string" },
+        "ownerEmail": { "type": "string" },
         "name": { "type": "string" },
         "city": { "type": "string" },
         "state": { "type": "string" },
+        "imageUrl": { "type": "string" },
         "isAuthorized": { "type": "boolean" },
         "isPaid": { "type": "boolean" }
       }

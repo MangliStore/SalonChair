@@ -36,7 +36,9 @@ import {
   Phone,
   ArrowRight,
   ShieldCheck,
-  CreditCard
+  CreditCard,
+  Image as ImageIcon,
+  Upload
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -47,6 +49,7 @@ import Link from "next/link";
 import { format, parseISO, isBefore } from "date-fns";
 import { cn } from "@/lib/utils";
 import { ChatDialog } from "@/components/chat-dialog";
+import Image from "next/image";
 
 export default function OwnerDashboard() {
   const { user, isUserLoading } = useUser();
@@ -87,22 +90,47 @@ export default function OwnerDashboard() {
   const bookings = useMemo(() => rawBookings ? [...rawBookings].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)) : [], [rawBookings]);
 
   const [salonForm, setSalonForm] = useState({
-    name: "", address: "", landmark: "", city: "", state: "", description: "", services: [] as any[]
+    name: "", address: "", landmark: "", city: "", state: "", description: "", imageUrl: "", services: [] as any[]
   });
 
   const openEditModal = () => {
     if (mySalon) {
       setSalonForm({
-        name: mySalon.name || "", address: mySalon.address || "", landmark: mySalon.landmark || "",
-        city: mySalon.city || "", state: mySalon.state || "", description: mySalon.description || "",
+        name: mySalon.name || "", 
+        address: mySalon.address || "", 
+        landmark: mySalon.landmark || "",
+        city: mySalon.city || "", 
+        state: mySalon.state || "", 
+        description: mySalon.description || "",
+        imageUrl: mySalon.imageUrl || "",
         services: mySalon.services || []
       });
     }
     setIsEditModalOpen(true);
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSalonForm(prev => ({ ...prev, imageUrl: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleUpdateSalon = async () => {
     if (!user || !db) return;
+    if (!salonForm.name || !salonForm.city || !salonForm.state || !salonForm.imageUrl) {
+      toast({
+        variant: "destructive",
+        title: "Missing Information",
+        description: "Please fill in all required fields and upload an image.",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     const salonId = mySalon?.id || user.uid; 
     const salonRef = doc(db, "salons", salonId);
@@ -111,6 +139,8 @@ export default function OwnerDashboard() {
       ...salonForm,
       id: salonId,
       ownerId: user.uid,
+      ownerName: user.displayName || "Owner",
+      ownerEmail: user.email || "No Email",
       updatedAt: serverTimestamp(),
       isAuthorized: mySalon ? (mySalon.isAuthorized ?? false) : false,
       isPaid: mySalon ? (mySalon.isPaid ?? false) : false,
@@ -121,7 +151,7 @@ export default function OwnerDashboard() {
     setDocumentNonBlocking(salonRef, payload, { merge: true });
     updateDocumentNonBlocking(doc(db, "users", user.uid), { isSalonOwner: true });
 
-    toast({ title: "Shop Profile Saved", description: "Your details have been submitted." });
+    toast({ title: "Shop Profile Saved", description: "Your details have been submitted for review." });
     setIsEditModalOpen(false);
     setIsSubmitting(false);
   };
@@ -205,18 +235,25 @@ export default function OwnerDashboard() {
         {mySalon && (
           <>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100">
-              <div>
-                <div className="flex items-center gap-3 mb-1">
-                  <h1 className="text-3xl font-bold">{mySalon.name || "Untitled Salon"}</h1>
-                  {mySalon.isAuthorized && mySalon.isPaid ? (
-                    <Badge className="bg-green-600 rounded-full">Verified & Live</Badge>
-                  ) : !mySalon.isPaid ? (
-                    <Badge variant="destructive" className="rounded-full">Unpaid</Badge>
-                  ) : (
-                    <Badge variant="secondary" className="rounded-full">Pending Verification</Badge>
-                  )}
+              <div className="flex items-center gap-6">
+                {mySalon.imageUrl && (
+                  <div className="relative h-20 w-20 rounded-2xl overflow-hidden border">
+                    <Image src={mySalon.imageUrl} alt={mySalon.name} fill className="object-cover" />
+                  </div>
+                )}
+                <div>
+                  <div className="flex items-center gap-3 mb-1">
+                    <h1 className="text-3xl font-bold">{mySalon.name || "Untitled Salon"}</h1>
+                    {mySalon.isAuthorized && mySalon.isPaid ? (
+                      <Badge className="bg-green-600 rounded-full">Verified & Live</Badge>
+                    ) : !mySalon.isPaid ? (
+                      <Badge variant="destructive" className="rounded-full">Unpaid</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="rounded-full">Pending Verification</Badge>
+                    )}
+                  </div>
+                  <p className="text-muted-foreground">{mySalon.city || "Setup city"}, {mySalon.state || "Setup state"}</p>
                 </div>
-                <p className="text-muted-foreground">{mySalon.city || "Setup city"}, {mySalon.state || "Setup state"}</p>
               </div>
               <div className="flex gap-3">
                 <Button variant="outline" className="rounded-xl h-12 px-6" onClick={openEditModal}>Edit Profile</Button>
@@ -276,34 +313,65 @@ export default function OwnerDashboard() {
         <DialogContent className="max-w-2xl rounded-[2.5rem]">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">Edit Salon Profile</DialogTitle>
-            <DialogDescription>Details will be reviewed by admin for final approval.</DialogDescription>
+            <DialogDescription>Details will be reviewed by admin for final approval. Image is mandatory.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Salon Name</Label><Input className="rounded-xl" value={salonForm.name} onChange={e => setSalonForm({...salonForm, name: e.target.value})} /></div>
+              <div className="space-y-2"><Label>Salon Name *</Label><Input className="rounded-xl" value={salonForm.name} onChange={e => setSalonForm({...salonForm, name: e.target.value})} /></div>
               <div className="space-y-2"><Label>Landmark</Label><Input className="rounded-xl" value={salonForm.landmark} onChange={e => setSalonForm({...salonForm, landmark: e.target.value})} /></div>
             </div>
             <div className="space-y-2"><Label>Full Address</Label><Input className="rounded-xl" value={salonForm.address} onChange={e => setSalonForm({...salonForm, address: e.target.value})} /></div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>State</Label>
+                <Label>State *</Label>
                 <Select value={salonForm.state} onValueChange={v => setSalonForm({...salonForm, state: v, city: ""})}>
                   <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                   <SelectContent>{INDIA_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>City</Label>
+                <Label>City *</Label>
                 <Select value={salonForm.city} onValueChange={v => setSalonForm({...salonForm, city: v})} disabled={!salonForm.state}>
                   <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                   <SelectContent>{(salonForm.state ? INDIA_DATA[salonForm.state] : []).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
+            
+            <div className="space-y-2">
+              <Label>Salon Image *</Label>
+              <div className="flex items-center gap-4">
+                <div className="relative h-24 w-24 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden bg-muted/50">
+                  {salonForm.imageUrl ? (
+                    <Image src={salonForm.imageUrl} alt="Preview" fill className="object-cover" />
+                  ) : (
+                    <ImageIcon className="h-8 w-8 text-muted-foreground opacity-30" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <Input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    id="salon-image-upload" 
+                    onChange={handleImageUpload} 
+                  />
+                  <Label 
+                    htmlFor="salon-image-upload" 
+                    className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary font-bold text-sm hover:bg-primary/20 transition-colors"
+                  >
+                    <Upload className="h-4 w-4" />
+                    {salonForm.imageUrl ? "Change Image" : "Upload Image"}
+                  </Label>
+                  <p className="text-[10px] text-muted-foreground mt-2">Recommended: Square image, max 2MB.</p>
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label>Description</Label>
               <textarea 
-                className="w-full min-h-[100px] rounded-xl border p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full min-h-[80px] rounded-xl border p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                 value={salonForm.description} 
                 onChange={e => setSalonForm({...salonForm, description: e.target.value})}
                 placeholder="Tell customers about your salon..."
