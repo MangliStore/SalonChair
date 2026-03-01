@@ -38,8 +38,7 @@ import {
   ShieldCheck,
   CreditCard,
   Image as ImageIcon,
-  Upload,
-  AlertCircle
+  Upload
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -407,10 +406,6 @@ export default function OwnerDashboard() {
                     <Upload className="h-4 w-4" />
                     {salonForm.imageUrl ? "Change Image" : "Upload Image"}
                   </Label>
-                  <div className="flex items-center gap-1.5 mt-2 text-[10px] text-muted-foreground">
-                    <AlertCircle className="h-3 w-3" />
-                    <span>Auto-converted to JPG and resized below 50KB.</span>
-                  </div>
                 </div>
               </div>
             </div>
