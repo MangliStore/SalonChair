@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -21,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 import { useRouter } from "next/navigation";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -66,6 +68,8 @@ export default function Home() {
     setCityFilter("all");
   };
 
+  const heroImageData = PlaceHolderImages.find(img => img.id === 'hero');
+
   if (isUserLoading || !user) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center">
@@ -84,12 +88,12 @@ export default function Home() {
       <section className="relative w-full overflow-hidden flex items-center justify-center bg-black min-h-[400px] md:min-h-[600px]">
         <div className="absolute inset-0 z-0">
           <Image 
-            src="https://picsum.photos/seed/salonhero/1200/600" 
+            src={heroImageData?.imageUrl || "https://picsum.photos/seed/salonhero/1200/600"} 
             alt="Salon Hero" 
             fill 
             className="object-cover opacity-60"
             priority
-            data-ai-hint="salon hero"
+            data-ai-hint={heroImageData?.imageHint || "salon hero"}
           />
         </div>
         
