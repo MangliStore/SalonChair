@@ -38,7 +38,8 @@ import {
   ShieldCheck,
   CreditCard,
   Image as ImageIcon,
-  Upload
+  Upload,
+  AlertTriangle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -124,7 +125,6 @@ export default function OwnerDashboard() {
         let width = img.width;
         let height = img.height;
 
-        // Resize logic (max dimension 800px to stay well under 50KB)
         const maxDim = 800;
         if (width > height) {
           if (width > maxDim) {
@@ -143,9 +143,6 @@ export default function OwnerDashboard() {
         const ctx = canvas.getContext("2d");
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
-          
-          // Convert to JPG and compress heavily to hit < 50KB
-          // 0.6 quality at 800px is typically 30-45KB
           const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.6);
           setSalonForm(prev => ({ ...prev, imageUrl: compressedDataUrl }));
         }
@@ -179,7 +176,7 @@ export default function OwnerDashboard() {
       ownerName: user.displayName || "Owner",
       ownerEmail: user.email || "No Email",
       updatedAt: serverTimestamp(),
-      isAuthorized: mySalon ? (mySalon.isAuthorized ?? false) : false,
+      isAuthorized: false, // Mandatory re-approval on every edit
       isPaid: mySalon ? (mySalon.isPaid ?? false) : false,
       isVisible: true,
       registrationDateTime: mySalon?.registrationDateTime || new Date().toISOString(),
@@ -188,7 +185,10 @@ export default function OwnerDashboard() {
     setDocumentNonBlocking(salonRef, payload, { merge: true });
     updateDocumentNonBlocking(doc(db, "users", user.uid), { isSalonOwner: true });
 
-    toast({ title: "Shop Profile Saved", description: "Your details have been submitted for review." });
+    toast({ 
+      title: "Profile Under Review", 
+      description: "Your updates have been submitted. An admin will re-approve your profile shortly." 
+    });
     setIsEditModalOpen(false);
     setIsSubmitting(false);
   };
@@ -350,8 +350,17 @@ export default function OwnerDashboard() {
         <DialogContent className="max-w-2xl rounded-[2.5rem]">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">Edit Salon Profile</DialogTitle>
-            <DialogDescription>Details will be reviewed by admin. Image is mandatory and will be optimized.</DialogDescription>
+            <DialogDescription>Details will be reviewed by admin. Image is mandatory.</DialogDescription>
           </DialogHeader>
+          
+          <div className="bg-orange-50 border border-orange-100 p-4 rounded-2xl flex items-start gap-3 mb-4">
+            <AlertTriangle className="h-5 w-5 text-orange-600 shrink-0 mt-0.5" />
+            <div className="text-xs text-orange-800 leading-relaxed">
+              <p className="font-bold mb-1">Mandatory Re-approval</p>
+              Saving these changes will temporarily take your shop offline. An administrator will review your profile and re-authorize it for the marketplace within 24 hours.
+            </div>
+          </div>
+
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2"><Label>Salon Name *</Label><Input className="rounded-xl" value={salonForm.name} onChange={e => setSalonForm({...salonForm, name: e.target.value})} /></div>
@@ -423,7 +432,7 @@ export default function OwnerDashboard() {
           <DialogFooter>
             <Button variant="outline" className="rounded-xl" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
             <Button className="rounded-xl px-8" onClick={handleUpdateSalon} disabled={isSubmitting || isProcessingImage}>
-              {isSubmitting ? 'Saving...' : 'Save Profile'}
+              {isSubmitting ? 'Saving...' : 'Save & Submit for Review'}
             </Button>
           </DialogFooter>
         </DialogContent>
