@@ -8,7 +8,7 @@ import { MOCK_SALONS } from "@/app/lib/mock-data";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Clock, Scissors, Star, Calendar as CalendarIcon, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { MapPin, Clock, Scissors, Star, Calendar as CalendarIcon, Loader2, CheckCircle2 } from "lucide-react";
 import Image from "next/image";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
 import { doc, collection, addDoc, serverTimestamp, query, where } from "firebase/firestore";
@@ -22,7 +22,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import imagesData from "@/app/lib/placeholder-images.json";
 
 export default function SalonDetail({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = use(paramsPromise);
@@ -37,8 +36,6 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
   const [isBooking, setIsBooking] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [now, setNow] = useState(new Date());
-
-  const heroImage = imagesData.placeholderImages.find(img => img.id === "salon-hero");
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000);
@@ -102,7 +99,7 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
       toast({
         variant: "destructive",
         title: "Slot Taken",
-        description: "This time slot was just booked by someone else. Please choose another.",
+        description: "This time slot was just booked by someone else.",
       });
       return;
     }
@@ -193,11 +190,11 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
       
       <div className="relative h-64 md:h-96 w-full">
         <Image 
-          src={salon.imageUrl || heroImage?.imageUrl || "https://picsum.photos/seed/salon1/1200/600"} 
+          src={salon.imageUrl || "https://picsum.photos/seed/salon1/1200/600"} 
           alt={salon.name} 
           fill 
           className="object-cover"
-          data-ai-hint={heroImage?.imageHint || "hair salon"}
+          data-ai-hint="salon"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
         <div className="absolute bottom-0 left-0 w-full p-6 md:p-12 text-white">
@@ -254,7 +251,7 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
                 <Clock className="h-5 w-5 text-primary" /> About this Salon
               </h3>
               <p className="text-muted-foreground leading-relaxed">
-                {salon.description || "A premier grooming destination offering expert services in a comfortable environment. Our team of professionals is dedicated to providing the best experience tailored to your style."}
+                {salon.description || "A premier grooming destination offering expert services in a comfortable environment."}
               </p>
               <div className="mt-6 flex flex-wrap gap-6 text-sm">
                 <div className="flex flex-col gap-1">
@@ -321,8 +318,6 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
                           disabled={isUnavailable}
                         >
                           {time}
-                          {reason === "occupied" && " (X)"}
-                          {reason === "past" && " (Passed)"}
                         </Button>
                       );
                     })}
@@ -348,14 +343,9 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
                 <Button 
                   className="w-full h-12 text-lg font-bold shadow-lg shadow-primary/20" 
                   onClick={handleBooking}
-                  disabled={isBooking || !selectedService || !selectedTime || !!isSlotUnavailable(selectedTime!)}
+                  disabled={isBooking || !selectedService || !selectedTime}
                 >
-                  {isBooking ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Booking...
-                    </>
-                  ) : selectedTime && isSlotUnavailable(selectedTime!) ? "Slot Unavailable" : "Confirm Request"}
+                  {isBooking ? "Booking..." : "Confirm Request"}
                 </Button>
               </CardFooter>
             </Card>

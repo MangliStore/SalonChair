@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
-import { FeedbackDialog } from "@/components/feedback-dialog";
 import { doc } from "firebase/firestore";
 
 export function Navbar() {
@@ -49,10 +48,6 @@ export function Navbar() {
           Salon Chair
         </Link>
         <div className="flex items-center gap-2 sm:gap-4">
-          <div className="hidden lg:block">
-            <FeedbackDialog />
-          </div>
-
           {user && (
             <>
               <Link href="/my-bookings">

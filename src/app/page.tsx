@@ -15,15 +15,13 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Star, Scissors, Clock, SearchX, Loader2, MessageSquarePlus } from "lucide-react";
+import { MapPin, Star, Scissors, Clock, SearchX, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 import { useRouter } from "next/navigation";
-import { FeedbackDialog } from "@/components/feedback-dialog";
-import imagesData from "@/app/lib/placeholder-images.json";
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -32,9 +30,6 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [stateFilter, setStateFilter] = useState("all");
   const [cityFilter, setCityFilter] = useState("all");
-
-  const heroImage = imagesData.placeholderImages.find(img => img.id === "salon-hero");
-  const defaultSalonImage = imagesData.placeholderImages.find(img => img.id === "salon-1");
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -90,12 +85,12 @@ export default function Home() {
       <section className="relative w-full overflow-hidden flex items-center justify-center bg-black min-h-[400px] md:min-h-[600px]">
         <div className="absolute inset-0 z-0">
           <Image 
-            src={heroImage?.imageUrl || "https://picsum.photos/seed/salonhero/1200/600"} 
+            src="https://picsum.photos/seed/salonhero/1200/600" 
             alt="Salon Hero" 
             fill 
             className="object-cover opacity-60"
             priority
-            data-ai-hint={heroImage?.imageHint || "luxury salon"}
+            data-ai-hint="salon hero"
           />
         </div>
         
@@ -167,11 +162,11 @@ export default function Home() {
               <Card className="overflow-hidden h-full transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 rounded-[2rem] border-primary/5">
                 <div className="relative h-56 w-full">
                   <Image 
-                    src={salon.imageUrl || defaultSalonImage?.imageUrl || "https://picsum.photos/seed/salon1/600/400"} 
+                    src={salon.imageUrl || "https://picsum.photos/seed/salon1/600/400"} 
                     alt={salon.name} 
                     fill 
                     className="object-cover transition-transform group-hover:scale-105"
-                    data-ai-hint={defaultSalonImage?.imageHint || "hair salon"}
+                    data-ai-hint="salon"
                   />
                   <Badge className="absolute left-4 top-4 bg-primary text-white hover:bg-primary shadow-lg rounded-full px-3">
                     Verified
@@ -233,15 +228,6 @@ export default function Home() {
             Salon Chair
           </div>
           <p className="text-muted-foreground mb-8">© 2026 Salon Chair Marketplace. Built for style.</p>
-          
-          <div className="flex flex-col items-center gap-4">
-            <FeedbackDialog trigger={
-              <button className="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors flex items-center gap-2 group bg-gray-50 px-6 py-3 rounded-full border border-gray-100 hover:border-primary/20">
-                <MessageSquarePlus className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
-                Have a problem or idea? Share Complain/Suggestion
-              </button>
-            } />
-          </div>
         </div>
       </footer>
     </div>

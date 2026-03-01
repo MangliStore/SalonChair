@@ -2,8 +2,6 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import dynamic from 'next/dynamic';
-const QRCodeSVG = dynamic(() => import('qrcode.react').then(mod => mod.QRCodeSVG), { ssr: false }); 
 import { Navbar } from "@/components/navbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,11 +32,7 @@ import {
   Clock,
   Calendar,
   Phone,
-  AlertCircle,
-  ShieldCheck,
-  CreditCard,
-  ArrowRight,
-  QrCode
+  ArrowRight
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -58,11 +52,6 @@ export default function OwnerDashboard() {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Payment Settings
-  const myUpiId = "7842831137@ybl"; 
-  const amount = "200";
-  const businessName = "Salon Chair";
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000);
@@ -88,10 +77,6 @@ export default function OwnerDashboard() {
   const [salonForm, setSalonForm] = useState({
     name: "", address: "", landmark: "", city: "", state: "", description: "", services: [] as any[]
   });
-
-  const upiUrl = user 
-    ? `upi://pay?pa=${myUpiId}&pn=${encodeURIComponent(businessName)}&am=${amount}&cu=INR&tn=SC_${user.uid.substring(0, 8)}`
-    : "";
 
   const openEditModal = () => {
     if (mySalon) {
@@ -124,7 +109,7 @@ export default function OwnerDashboard() {
     setDocumentNonBlocking(salonRef, payload, { merge: true });
     updateDocumentNonBlocking(doc(db, "users", user.uid), { isSalonOwner: true });
 
-    toast({ title: "Shop Profile Saved", description: "Your details have been submitted. Now complete the activation payment." });
+    toast({ title: "Shop Profile Saved", description: "Your details have been submitted." });
     setIsEditModalOpen(false);
     setIsSubmitting(false);
   };
@@ -147,66 +132,24 @@ export default function OwnerDashboard() {
       <main className="container mx-auto px-4 py-8 max-w-6xl">
         
         {(!mySalon || !mySalon.isPaid) && (
-          <div className="mb-12 grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-            <div className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-primary/10 space-y-6">
-              <div className="space-y-2">
-                <Badge className="bg-primary/10 text-primary hover:bg-primary/10 border-none px-4 py-1">
-                  Activation Required
-                </Badge>
-                <h2 className="text-3xl font-black text-gray-900">Go Live in the Marketplace</h2>
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  Your salon is currently hidden. Complete the one-time activation fee of ₹{amount} to start receiving bookings.
-                </p>
-              </div>
-
-              <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 space-y-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-500 font-medium">Your Verification Ref:</span>
-                  <span className="font-mono font-black text-primary bg-white px-3 py-1 rounded-lg border shadow-sm">
-                    SC_{user.uid.substring(0, 8)}
-                  </span>
-                </div>
-                <div className="flex gap-3 text-left text-xs text-gray-500 leading-normal">
-                  <ShieldCheck className="h-5 w-5 shrink-0 text-primary" />
-                  <p>
-                    Scan the QR code to pay. Our admin will verify the payment using your unique ID and activate your shop within 24 hours.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <Button variant="outline" className="flex-1 rounded-xl h-12 font-bold gap-2" onClick={openEditModal}>
-                  <Store className="h-4 w-4" /> {mySalon ? "Edit Shop Profile" : "Setup Shop Profile"}
+          <div className="mb-12 bg-white p-10 rounded-[2.5rem] shadow-xl border border-primary/10 text-center space-y-6">
+            <Badge className="bg-primary/10 text-primary hover:bg-primary/10 border-none px-4 py-1">
+              Action Required
+            </Badge>
+            <h2 className="text-3xl font-black text-gray-900">Activate Your Salon</h2>
+            <p className="text-muted-foreground text-sm leading-relaxed max-w-md mx-auto">
+              Your salon is currently hidden. Complete the activation process to start receiving bookings.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+              <Button variant="outline" className="rounded-xl h-12 font-bold gap-2" onClick={openEditModal}>
+                <Store className="h-4 w-4" /> {mySalon ? "Edit Shop Profile" : "Setup Shop Profile"}
+              </Button>
+              <Link href="/dashboard">
+                <Button className="rounded-xl h-12 font-bold gap-2">
+                  View Payment QR Code <ArrowRight className="h-4 w-4" />
                 </Button>
-                <Link href="/dashboard" className="flex-1">
-                  <Button className="w-full rounded-xl h-12 font-bold gap-2">
-                    Full Payment Details <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-              </div>
+              </Link>
             </div>
-
-            <Card className="bg-white p-8 rounded-[2.5rem] shadow-2xl border-2 border-primary/20 flex flex-col items-center justify-center text-center">
-              <div className="relative group p-4 bg-white rounded-[2rem]">
-                {upiUrl ? (
-                  <QRCodeSVG 
-                    value={upiUrl} 
-                    size={240} 
-                    level="H"
-                    includeMargin={false}
-                  />
-                ) : (
-                  <div className="h-[240px] w-[240px] flex items-center justify-center">
-                    <Loader2 className="animate-spin text-muted-foreground" />
-                  </div>
-                )}
-              </div>
-              <div className="mt-6 space-y-1">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Payable Amount</p>
-                <p className="text-3xl font-black text-primary">₹{amount}.00</p>
-                <p className="text-xs text-muted-foreground pt-2 font-medium">Scan with GPay, PhonePe, or Paytm</p>
-              </div>
-            </Card>
           </div>
         )}
 
