@@ -56,10 +56,14 @@ export default function Home() {
   }, [stateFilter]);
 
   const filteredSalons = allSalons.filter(salon => {
-    const matchesSearch = salon.name.toLowerCase().includes(search.toLowerCase()) || 
-                         salon.city.toLowerCase().includes(search.toLowerCase());
-    const matchesState = stateFilter === "all" || salon.state === stateFilter;
-    const matchesCity = cityFilter === "all" || salon.city === cityFilter;
+    const name = salon.name || "";
+    const city = salon.city || "";
+    const state = salon.state || "";
+
+    const matchesSearch = name.toLowerCase().includes(search.toLowerCase()) || 
+                         city.toLowerCase().includes(search.toLowerCase());
+    const matchesState = stateFilter === "all" || state === stateFilter;
+    const matchesCity = cityFilter === "all" || city === cityFilter;
     return matchesSearch && matchesState && matchesCity;
   });
 
@@ -166,7 +170,7 @@ export default function Home() {
                 <div className="relative h-56 w-full">
                   <Image 
                     src={salon.imageUrl || "https://picsum.photos/seed/salon1/600/400"} 
-                    alt={salon.name} 
+                    alt={salon.name || "Salon"} 
                     fill 
                     className="object-cover transition-transform group-hover:scale-105"
                     data-ai-hint="salon"
