@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -22,8 +23,7 @@ import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebas
 import { collection, query, where } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { FeedbackDialog } from "@/components/feedback-dialog";
-
-const HERO_IMAGE_URL = "https://picsum.photos/seed/salonhero/1200/600";
+import imagesData from "@/app/lib/placeholder-images.json";
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
@@ -32,6 +32,9 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [stateFilter, setStateFilter] = useState("all");
   const [cityFilter, setCityFilter] = useState("all");
+
+  const heroImage = imagesData.placeholderImages.find(img => img.id === "salon-hero");
+  const defaultSalonImage = imagesData.placeholderImages.find(img => img.id === "salon-1");
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -48,7 +51,6 @@ export default function Home() {
 
   const allSalons = useMemo(() => {
     const real = dbSalons || [];
-    // Only show mock salons that are "verified" to keep the experience clean
     return [...real, ...MOCK_SALONS.filter(s => s.isAuthorized && s.isPaid)];
   }, [dbSalons]);
 
@@ -88,11 +90,12 @@ export default function Home() {
       <section className="relative w-full overflow-hidden flex items-center justify-center bg-black min-h-[400px] md:min-h-[600px]">
         <div className="absolute inset-0 z-0">
           <Image 
-            src={HERO_IMAGE_URL} 
+            src={heroImage?.imageUrl || "https://picsum.photos/seed/salonhero/1200/600"} 
             alt="Salon Hero" 
             fill 
             className="object-cover opacity-60"
             priority
+            data-ai-hint={heroImage?.imageHint || "luxury salon"}
           />
         </div>
         
@@ -164,10 +167,11 @@ export default function Home() {
               <Card className="overflow-hidden h-full transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 rounded-[2rem] border-primary/5">
                 <div className="relative h-56 w-full">
                   <Image 
-                    src={salon.imageUrl || "https://picsum.photos/seed/salon1/600/400"} 
+                    src={salon.imageUrl || defaultSalonImage?.imageUrl || "https://picsum.photos/seed/salon1/600/400"} 
                     alt={salon.name} 
                     fill 
                     className="object-cover transition-transform group-hover:scale-105"
+                    data-ai-hint={defaultSalonImage?.imageHint || "hair salon"}
                   />
                   <Badge className="absolute left-4 top-4 bg-primary text-white hover:bg-primary shadow-lg rounded-full px-3">
                     Verified

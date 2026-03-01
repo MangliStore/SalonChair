@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -21,6 +22,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import imagesData from "@/app/lib/placeholder-images.json";
 
 export default function SalonDetail({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = use(paramsPromise);
@@ -36,7 +38,8 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [now, setNow] = useState(new Date());
 
-  // Update current time every minute to keep time slot validation fresh
+  const heroImage = imagesData.placeholderImages.find(img => img.id === "salon-hero");
+
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000);
     return () => clearInterval(timer);
@@ -144,7 +147,7 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
 
   const handleDateSelect = (newDate: Date | undefined) => {
     setDate(newDate);
-    setSelectedTime(null); // Reset time when date changes
+    setSelectedTime(null);
     setIsCalendarOpen(false);
   };
 
@@ -174,17 +177,13 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
   ];
 
   const isSlotUnavailable = (time: string) => {
-    // Check if slot is occupied by someone else
     if (occupiedSlots.has(time)) return "occupied";
-
-    // Check if slot is in the past (if date is today)
     if (date && isToday(date)) {
       const [hours, minutes] = time.split(":").map(Number);
       const slotTime = new Date(date);
       slotTime.setHours(hours, minutes, 0, 0);
       if (isBefore(slotTime, now)) return "past";
     }
-
     return null;
   };
 
@@ -194,10 +193,11 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
       
       <div className="relative h-64 md:h-96 w-full">
         <Image 
-          src={salon.imageUrl || "https://picsum.photos/seed/salon1/1200/600"} 
+          src={salon.imageUrl || heroImage?.imageUrl || "https://picsum.photos/seed/salon1/1200/600"} 
           alt={salon.name} 
           fill 
           className="object-cover"
+          data-ai-hint={heroImage?.imageHint || "hair salon"}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
         <div className="absolute bottom-0 left-0 w-full p-6 md:p-12 text-white">
@@ -327,14 +327,6 @@ export default function SalonDetail({ params: paramsPromise }: { params: Promise
                       );
                     })}
                   </div>
-                  {selectedTime && isSlotUnavailable(selectedTime) && (
-                    <div className="flex items-center gap-2 text-destructive text-xs mt-2 font-medium">
-                      <AlertCircle className="h-3.5 w-3.5" />
-                      {isSlotUnavailable(selectedTime) === "occupied" 
-                        ? "This chair is already booked. Please pick a different time." 
-                        : "This time slot has already passed."}
-                    </div>
-                  )}
                 </div>
 
                 {selectedService && (
