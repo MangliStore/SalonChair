@@ -25,7 +25,8 @@ import {
   Users,
   Search,
   Clock,
-  AlertOctagon
+  AlertOctagon,
+  KeyRound
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
@@ -40,6 +41,11 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const db = useFirestore();
   const [userSearch, setUserSearch] = useState("");
+  
+  // Secondary Password Protection
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const ADMIN_PASSWORD = "SCAdmin2026"; // Change this as needed
 
   const authorizedEmail = "no1salonchair@gmail.com";
 
@@ -85,6 +91,16 @@ export default function AdminDashboard() {
     toast({ title: "Payment Status Updated" });
   };
 
+  const handleUnlock = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordInput === ADMIN_PASSWORD) {
+      setIsUnlocked(true);
+      toast({ title: "Admin Access Granted", description: "Dashboard unlocked successfully." });
+    } else {
+      toast({ variant: "destructive", title: "Incorrect Password", description: "Please enter the valid administrator key." });
+    }
+  };
+
   const revenue = salons.filter(s => s.isPaid).length * 200;
 
   if (isUserLoading) {
@@ -128,6 +144,54 @@ export default function AdminDashboard() {
     );
   }
 
+  // Password Lock Screen
+  if (!isUnlocked) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-2xl border-primary/20 rounded-[2.5rem] overflow-hidden">
+            <div className="h-2 bg-primary"></div>
+            <CardHeader className="text-center space-y-1 pt-8">
+              <div className="mx-auto w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 rotate-3">
+                <Lock className="h-7 w-7 text-primary" />
+              </div>
+              <CardTitle className="text-2xl font-black">Admin Verification</CardTitle>
+              <CardDescription>Enter the primary access key to continue</CardDescription>
+            </CardHeader>
+            <CardContent className="p-8 pt-4">
+              <form onSubmit={handleUnlock} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="password">Administrator Password</Label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      id="password"
+                      type="password" 
+                      placeholder="••••••••" 
+                      className="pl-10 h-12 rounded-xl"
+                      value={passwordInput}
+                      onChange={(e) => setPasswordInput(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+                </div>
+                <Button type="submit" className="w-full h-12 rounded-xl text-lg font-bold gap-2">
+                  Unlock Dashboard
+                </Button>
+              </form>
+            </CardContent>
+            <div className="px-8 pb-8 text-center">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
+                Logged in as: {user.email}
+              </p>
+            </div>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       <Navbar />
@@ -137,9 +201,14 @@ export default function AdminDashboard() {
             <h1 className="text-4xl font-bold tracking-tight">Admin Control Center</h1>
             <p className="text-muted-foreground">Master oversight for Salon Chair network.</p>
           </div>
-          <Button variant="outline" className="gap-2 rounded-xl" onClick={() => window.location.reload()}>
-            <RefreshCcw className="h-4 w-4" /> Refresh Data
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" className="gap-2 rounded-xl" onClick={() => window.location.reload()}>
+              <RefreshCcw className="h-4 w-4" /> Refresh
+            </Button>
+            <Button variant="ghost" className="rounded-xl text-muted-foreground" onClick={() => setIsUnlocked(false)}>
+              <Lock className="h-4 w-4" /> Lock Panel
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
