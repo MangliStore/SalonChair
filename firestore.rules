@@ -4,7 +4,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function isSignedIn() { return request.auth != null; }
     function isAdmin() { 
-      return isSignedIn() && request.auth.token.email == 'citimobilesknr@gmail.com'; 
+      return isSignedIn() && request.auth.token.email == 'no1salonchair@gmail.com'; 
     }
     
     match /users/{userId} {

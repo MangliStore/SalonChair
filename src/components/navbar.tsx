@@ -28,7 +28,7 @@ export function Navbar() {
   const handleFeedback = () => {
     const subject = encodeURIComponent("Salon Chair - Feedback/Suggestion")
     const body = encodeURIComponent("To the Salon Chair Team,\n\nI would like to suggest/report the following:\n\n")
-    window.location.href = `mailto:citimobilesknr@gmail.com?subject=${subject}&body=${body}`
+    window.location.href = `mailto:no1salonchair@gmail.com?subject=${subject}&body=${body}`
   }
 
   const handleSignOut = () => {

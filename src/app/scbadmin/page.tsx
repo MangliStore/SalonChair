@@ -24,21 +24,24 @@ import {
   Mail, 
   Users,
   Search,
-  Clock
+  Clock,
+  AlertOctagon
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, doc } from "firebase/firestore";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import Image from "next/image";
 import { format } from "date-fns";
+import Link from "next/link";
 
 export default function AdminDashboard() {
+  const { user, isUserLoading } = useUser();
   const { toast } = useToast();
   const db = useFirestore();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState("");
   const [userSearch, setUserSearch] = useState("");
+
+  const authorizedEmail = "no1salonchair@gmail.com";
 
   const salonsQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -67,16 +70,6 @@ export default function AdminDashboard() {
     });
   }, [users, userSearch]);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password === "Jumbopack@1137") {
-      setIsAuthenticated(true);
-      toast({ title: "Access Granted", description: "Welcome back, Administrator." });
-    } else {
-      toast({ variant: "destructive", title: "Access Denied", description: "Incorrect password." });
-    }
-  };
-
   const toggleAuthorization = (id: string, status: boolean) => {
     if (!db) return;
     updateDocumentNonBlocking(doc(db, "salons", id), { isAuthorized: status });
@@ -94,34 +87,40 @@ export default function AdminDashboard() {
 
   const revenue = salons.filter(s => s.isPaid).length * 200;
 
-  if (!isAuthenticated) {
+  if (isUserLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user || user.email !== authorizedEmail) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <Navbar />
         <main className="flex-1 flex items-center justify-center p-4">
-          <Card className="w-full max-w-md shadow-2xl border-primary/20">
+          <Card className="w-full max-w-md shadow-2xl border-destructive/20 rounded-[2.5rem]">
             <CardHeader className="text-center">
-              <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                <Lock className="h-6 w-6 text-primary" />
+              <div className="mx-auto w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
+                <AlertOctagon className="h-8 w-8 text-destructive" />
               </div>
-              <CardTitle className="text-2xl">Admin Control Login</CardTitle>
-              <CardDescription>Master password required for verification access</CardDescription>
+              <CardTitle className="text-2xl font-bold">Restricted Access</CardTitle>
+              <CardDescription>
+                This area is reserved for the primary administrator only.
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input 
-                    id="password" 
-                    type="password" 
-                    value={password} 
-                    onChange={(e) => setPassword(e.target.value)} 
-                    className="h-12"
-                    placeholder="••••••••"
-                  />
-                </div>
-                <Button type="submit" className="w-full h-12 text-lg">Unlock Control Center</Button>
-              </form>
+            <CardContent className="text-center space-y-6">
+              <div className="bg-muted p-4 rounded-2xl text-sm text-muted-foreground border border-dashed">
+                Logged in as:<br/>
+                <span className="font-bold text-foreground">{user?.email || "Guest"}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                If you are the administrator, please ensure you are signed in with the authorized Gmail account.
+              </p>
+              <Link href="/">
+                <Button variant="outline" className="w-full rounded-xl">Back to Marketplace</Button>
+              </Link>
             </CardContent>
           </Card>
         </main>
@@ -136,9 +135,9 @@ export default function AdminDashboard() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
           <div>
             <h1 className="text-4xl font-bold tracking-tight">Admin Control Center</h1>
-            <p className="text-muted-foreground">Manage salon network health and verifications.</p>
+            <p className="text-muted-foreground">Master oversight for Salon Chair network.</p>
           </div>
-          <Button variant="outline" className="gap-2" onClick={() => window.location.reload()}>
+          <Button variant="outline" className="gap-2 rounded-xl" onClick={() => window.location.reload()}>
             <RefreshCcw className="h-4 w-4" /> Refresh Data
           </Button>
         </div>
@@ -156,7 +155,7 @@ export default function AdminDashboard() {
               <p className="text-[10px] text-white/60 mt-1">From {salons.filter(s => s.isPaid).length} paid shops</p>
             </CardContent>
           </Card>
-          <Card className="shadow-lg border-none rounded-3xl">
+          <Card className="shadow-lg border-none rounded-3xl bg-white">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium text-muted-foreground">Pending Review</CardTitle>
             </CardHeader>
@@ -167,7 +166,7 @@ export default function AdminDashboard() {
               <p className="text-[10px] text-muted-foreground mt-1">Waiting for approval</p>
             </CardContent>
           </Card>
-          <Card className="shadow-lg border-none rounded-3xl">
+          <Card className="shadow-lg border-none rounded-3xl bg-white">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium text-muted-foreground">Active Salons</CardTitle>
             </CardHeader>
@@ -178,7 +177,7 @@ export default function AdminDashboard() {
               <p className="text-[10px] text-muted-foreground mt-1">Verified & Paid</p>
             </CardContent>
           </Card>
-          <Card className="shadow-lg border-none rounded-3xl">
+          <Card className="shadow-lg border-none rounded-3xl bg-white">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium text-muted-foreground">Registered Users</CardTitle>
             </CardHeader>

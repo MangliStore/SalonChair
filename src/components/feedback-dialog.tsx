@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -20,13 +21,12 @@ interface FeedbackDialogProps {
 
 export function FeedbackDialog({ trigger }: FeedbackDialogProps) {
   const [feedback, setFeedback] = useState("");
-  // Using the verified admin email from project context
-  const adminEmail = "citimobilesknr@gmail.com"; 
+  // Updated verified admin email
+  const adminEmail = "no1salonchair@gmail.com"; 
 
   const handleSubmit = () => {
     const subject = encodeURIComponent("Salon Chair - Complain/Suggestion");
     const body = encodeURIComponent(feedback);
-    // Standard mailto link to open user's default email client (Gmail/Outlook/etc)
     window.location.href = `mailto:${adminEmail}?subject=${subject}&body=${body}`;
   };
 
