@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from "react";
@@ -45,7 +44,7 @@ export default function AdminDashboard() {
   // Secondary Password Protection
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
-  const ADMIN_PASSWORD = "SCAdmin2026"; // Change this as needed
+  const ADMIN_PASSWORD = "Jumbopack@1137"; 
 
   const authorizedEmail = "no1salonchair@gmail.com";
 
