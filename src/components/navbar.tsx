@@ -28,7 +28,7 @@ export function Navbar() {
   const handleFeedback = () => {
     const subject = encodeURIComponent("Salon Chair - Feedback/Suggestion")
     const body = encodeURIComponent("To the Salon Chair Team,\n\nI would like to suggest/report the following:\n\n")
-    window.location.href = `mailto:support@salonchair.com?subject=${subject}&body=${body}`
+    window.location.href = `mailto:citimobilesknr@gmail.com?subject=${subject}&body=${body}`
   }
 
   const handleSignOut = () => {
@@ -44,7 +44,7 @@ export function Navbar() {
           <Scissors className="h-6 w-6 text-primary" />
           <div className="flex items-center gap-1">
             <span className="font-headline text-xl font-bold tracking-tight text-foreground">Salon Chair</span>
-            <ChairIcon className="h-5 w-5 text-primary" />
+            <ChairIcon className="h-7 w-7 text-primary" />
           </div>
         </Link>
         
