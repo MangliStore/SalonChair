@@ -1,7 +1,7 @@
 "use client";
 
 import { Navbar } from "@/components/navbar";
-import { Scissors, ShieldCheck, Mail, MapPin, Clock } from "lucide-react";
+import { ShieldCheck, Mail, MapPin } from "lucide-react";
 import Link from "next/link";
 
 export default function PrivacyPolicy() {
@@ -92,7 +92,6 @@ export default function PrivacyPolicy() {
                 </div>
                 <div className="bg-primary/5 p-6 rounded-3xl border border-primary/10 flex items-center justify-center">
                    <div className="text-center">
-                      <Scissors className="h-8 w-8 text-primary mx-auto mb-2" />
                       <p className="font-bold text-primary">Salon Chair Team</p>
                    </div>
                 </div>
