@@ -73,7 +73,7 @@ export default function PrivacyPolicy() {
               </h2>
               <p>In accordance with Indian IT Rules 2026, we retain your data only as long as necessary.</p>
               <ul className="list-disc pl-6 space-y-2">
-                <li>Users can request data deletion by emailing <span className="text-primary font-bold">citimobilesknr@gmail.com</span>.</li>
+                <li>Users can request data deletion by emailing <span className="text-primary font-bold">no1salonchair@gmail.com</span>.</li>
                 <li>Accounts inactive for more than 2 years will be automatically purged.</li>
               </ul>
             </section>
@@ -84,7 +84,7 @@ export default function PrivacyPolicy() {
                 <div className="bg-gray-50 p-6 rounded-3xl border border-gray-100 space-y-3">
                   <p className="flex items-center gap-3 font-bold text-gray-900">
                     <span className="text-primary bg-white p-2 rounded-xl border"><Mail className="h-4 w-4" /></span>
-                    citimobilesknr@gmail.com
+                    no1salonchair@gmail.com
                   </p>
                   <p className="flex items-center gap-3 text-sm text-muted-foreground">
                     <span className="text-primary bg-white p-2 rounded-xl border"><MapPin className="h-4 w-4" /></span>
