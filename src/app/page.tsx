@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -15,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Star, Scissors, Clock, SearchX, Loader2 } from "lucide-react";
+import { MapPin, Star, Scissors, Clock, SearchX, Loader2, ShieldCheck } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -233,6 +232,12 @@ export default function Home() {
           <div className="flex justify-center items-center gap-2 font-headline text-2xl font-bold text-primary mb-6">
             <Scissors className="h-6 w-6 text-primary" />
             Salon Chair
+          </div>
+          <div className="flex justify-center items-center gap-6 mb-8 text-sm font-medium">
+            <Link href="/" className="text-muted-foreground hover:text-primary transition-colors">Home</Link>
+            <Link href="/privacy" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5">
+              <ShieldCheck className="h-4 w-4" /> Privacy Policy
+            </Link>
           </div>
           <p className="text-muted-foreground mb-8">© 2026 Salon Chair Marketplace. Built for style.</p>
         </div>
