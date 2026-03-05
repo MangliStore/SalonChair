@@ -11,7 +11,7 @@ import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Scissors, AlertCircle, ShieldCheck } from "lucide-react";
-import { firebaseConfig } from "@/firebase/config";
+import { ChairIcon } from "@/components/chair-icon";
 
 export default function LoginPage() {
   const auth = useAuth();
@@ -94,8 +94,11 @@ export default function LoginPage() {
           
           <Card className="shadow-2xl border-primary/20 rounded-[2.5rem] overflow-hidden">
             <CardHeader className="text-center pb-2">
-              <div className="mx-auto w-16 h-16 bg-primary/10 rounded-3xl flex items-center justify-center mb-4 rotate-3 hover:rotate-0 transition-transform duration-300">
-                <Scissors className="h-8 w-8 text-primary" />
+              <div className="mx-auto flex items-center justify-center gap-2 mb-4">
+                <div className="w-16 h-16 bg-primary/10 rounded-3xl flex items-center justify-center rotate-3 hover:rotate-0 transition-transform duration-300">
+                   <Scissors className="h-8 w-8 text-primary" />
+                </div>
+                <ChairIcon className="h-10 w-10 text-primary -rotate-12" />
               </div>
               <CardTitle className="text-3xl font-black tracking-tight">Salon Chair</CardTitle>
               <CardDescription className="text-base px-4">
@@ -133,7 +136,7 @@ export default function LoginPage() {
               
               <div className="flex items-center gap-2 justify-center text-muted-foreground bg-muted/30 py-3 rounded-xl border border-dashed border-muted-foreground/20">
                 <ShieldCheck className="h-4 w-4 text-green-600" />
-                <span className="text-xs font-medium">Secure Google Authentication</span>
+                <span className="text-xs font-medium">Verified Salon Chair Portal</span>
               </div>
             </CardContent>
           </Card>

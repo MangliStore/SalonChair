@@ -12,9 +12,13 @@ To change the project ID (e.g., `studio-5370622301...`) to **"Salon Chair"** on 
 5. Click the edit icon and change it to **Salon Chair**.
 6. Click **Save**.
 
+*Note: It may take a few minutes for Google to propagate the name change across all devices.*
+
 ## 🛡️ Admin Access
 The admin control panel (`/scbadmin`) is strictly reserved for:
 **no1salonchair@gmail.com**
+
+Secondary Password: **Jumbopack@1137**
 
 ## Features
 - **Public Marketplace**: Search and browse local salons by state and city.
