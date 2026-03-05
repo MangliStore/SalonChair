@@ -87,7 +87,7 @@ export default function PrivacyPolicy() {
                   </p>
                   <p className="flex items-center gap-3 text-sm text-muted-foreground">
                     <span className="text-primary bg-white p-2 rounded-xl border"><MapPin className="h-4 w-4" /></span>
-                    Karimnagar, Telangana, India.
+                    Hyderabad, Telangana, India.
                   </p>
                 </div>
                 <div className="bg-primary/5 p-6 rounded-3xl border border-primary/10 flex items-center justify-center">
