@@ -23,7 +23,7 @@ export default function PrivacyPolicy() {
           <div className="space-y-10 text-gray-700 leading-relaxed">
             <section>
               <p className="text-lg">
-                At Salon Chair, accessible from <Link href="https://salonchair.website" className="text-primary hover:underline font-bold">https://salonchair.website</Link>, one of our main priorities is the privacy of our visitors. This Privacy Policy document contains types of information that is collected and recorded by Salon Chair and how we use it.
+                At Salon Chair, accessible from <Link href="https://salonchair.website" className="text-primary hover:underline font-bold">https://salonchair.website</Link>, one of our main priorities is the privacy of our visitors. This Privacy Policy document contains types of information that is collected and recorded by Salon Chair.
               </p>
             </section>
 
@@ -34,7 +34,7 @@ export default function PrivacyPolicy() {
               </h2>
               <p>We collect personal information that you voluntarily provide to us when you register on the App or book a service.</p>
               <ul className="list-disc pl-6 space-y-2">
-                <li><strong>Personal Data:</strong> Name, email address (via Google Login), phone number, and city.</li>
+                <li><strong>Personal Data:</strong> Name, email address (via Google Login), and city.</li>
                 <li><strong>Salon Data:</strong> Shop name, location, and verification details for owners.</li>
                 <li><strong>Booking Data:</strong> Service type, appointment time, and salon preference.</li>
               </ul>
@@ -57,9 +57,8 @@ export default function PrivacyPolicy() {
             <section className="space-y-4">
               <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                 <span className="bg-primary text-white h-6 w-6 rounded-full flex items-center justify-center text-xs">3</span>
-                Google User Data (OAuth Disclosure)
+                Google User Data
               </h2>
-              <p>Salon Chair's use and transfer of information received from Google APIs to any other app will adhere to the Google API Services User Data Policy, including the Limited Use requirements.</p>
               <ul className="list-disc pl-6 space-y-2">
                 <li>We only access your Google Email and Profile Name to create your account.</li>
                 <li>We do not share your Google data with third-party advertisers or data brokers.</li>
