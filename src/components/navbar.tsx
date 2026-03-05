@@ -3,7 +3,7 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Scissors, User, MessageSquareText, LogOut, LayoutDashboard } from "lucide-react"
+import { Scissors, User, LogOut, LayoutDashboard } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { ChairIcon } from "@/components/chair-icon"
 import { useUser, useAuth } from "@/firebase"
@@ -25,12 +25,6 @@ export function Navbar() {
   const auth = useAuth()
   const isOwner = pathname.startsWith('/owner')
   
-  const handleFeedback = () => {
-    const subject = encodeURIComponent("Salon Chair - Feedback/Suggestion")
-    const body = encodeURIComponent("To the Salon Chair Team,\n\nI would like to suggest/report the following:\n\n")
-    window.location.href = `mailto:no1salonchair@gmail.com?subject=${subject}&body=${body}`
-  }
-
   const handleSignOut = () => {
     signOut(auth).then(() => {
       router.push('/')
@@ -49,11 +43,6 @@ export function Navbar() {
         </Link>
         
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={handleFeedback} className="hidden lg:flex gap-2">
-            <MessageSquareText className="h-4 w-4" />
-            Feedback
-          </Button>
-          
           <Link href="/my-bookings" className="hidden sm:block">
             <Button variant="ghost" size="sm">My Bookings</Button>
           </Link>
