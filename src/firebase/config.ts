@@ -1,8 +1,8 @@
 export const firebaseConfig = {
-  "projectId": "studio-5370622301-6620e",
-  "appId": "1:24658204750:web:380f06a42c621035d98b1f",
-  "apiKey": "AIzaSyDirtjPCrjTwgCt8xmgmKvgj6TynS8V-AI",
-  "authDomain": "studio-5370622301-6620e.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "24658204750"
+  apiKey: "AIzaSy...", // Keep your actual API Key here
+  authDomain: "salonchair.website", // This removes the 'studio-5370...' ID
+  projectId: "studio-5370622301-6620e",
+  storageBucket: "studio-5370622301-6620e.firebasestorage.app",
+  messagingSenderId: "107...", // Keep your actual Sender ID here
+  appId: "1:107..." // Keep your actual App ID here
 };
