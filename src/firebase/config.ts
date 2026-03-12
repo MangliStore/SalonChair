@@ -1,8 +1,18 @@
-export const firebaseConfig = {
-  apiKey: "AIzaSyCx-V8R2W9Q7T4P1M0L3K6J5H4G3F2E1D0",
-  authDomain: "salonchair.website",
-  projectId: "studio-5370622301-6620e",
-  storageBucket: "studio-5370622301-6620e.firebasestorage.app",
-  messagingSenderId: "107842831137",
-  appId: "1:107842831137:web:9b8a7c6d5e4f3a2b1c0d9e"
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
+
+// This "if" statement prevents the (app/no-options) error
+// It checks if an app already exists; if not, it initializes it with the config
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const auth = getAuth(app);
+
+export { app, auth, firebaseConfig };
