@@ -24,7 +24,7 @@ const UserDashboard: React.FC = () => {
         const bookingData: Booking & { salon?: Salon } = { ...data, id: bookingDoc.id };
         const salonDoc = await getDoc(doc(db, 'salons', bookingData.salonId));
         if (salonDoc.exists()) {
-          bookingData.salon = salonDoc.data() as Salon;
+          bookingData.salon = { ...salonDoc.data() as Salon, id: salonDoc.id };
         }
         bookingList.push(bookingData);
       }

@@ -10,11 +10,11 @@ import UserDashboard from './components/UserDashboard';
 import Chat from './components/Chat';
 import { db } from './firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { Salon } from './types';
 
 const AppContent: React.FC = () => {
-  const { user, profile, loading, updateRole } = useAuth();
+  const { user, profile, loading, updateRole, error: authError } = useAuth();
   const [hasSalon, setHasSalon] = useState<boolean | null>(null);
   const [checkingSalon, setCheckingSalon] = useState(false);
   const [view, setView] = useState<'home' | 'dashboard'>('home');
@@ -63,37 +63,25 @@ const AppContent: React.FC = () => {
     );
   }
 
-  // If logged in but no profile (new user), show role selection
-  if (user && !profile) {
-    return (
-      <Layout>
-        <RoleSelection />
-      </Layout>
-    );
-  }
-
-  // Admin View
-  if (profile?.role === 'admin') {
-    return (
-      <Layout>
-        <AdminPanel />
-      </Layout>
-    );
-  }
-
-  // Owner View
-  if (profile?.role === 'owner') {
-    return (
-      <Layout>
-        {hasSalon ? <OwnerDashboard /> : <SalonOnboarding />}
-      </Layout>
-    );
-  }
-
-  // User View
   return (
     <Layout>
-      {view === 'dashboard' ? <UserDashboard /> : <Home />}
+      {authError && (
+        <div className="max-w-7xl mx-auto px-4 pt-4">
+          <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-2xl flex items-center gap-3 text-red-500 text-sm">
+            <AlertCircle size={18} />
+            <p>{authError}</p>
+          </div>
+        </div>
+      )}
+      {user && !profile ? (
+        <RoleSelection />
+      ) : profile?.role === 'admin' ? (
+        <AdminPanel />
+      ) : profile?.role === 'owner' ? (
+        hasSalon ? <OwnerDashboard /> : <SalonOnboarding />
+      ) : (
+        view === 'dashboard' ? <UserDashboard /> : <Home />
+      )}
       {activeChat && user && (
         <Chat
           bookingId={activeChat}
