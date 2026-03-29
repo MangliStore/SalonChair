@@ -1,0 +1,188 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: auth.uid
+// Fields:
+//   - uid: string (required)
+//   - email: string (required, email format)
+//   - name: string (required)
+//   - photoURL: string (required)
+//   - role: string (required, ['user', 'owner', 'admin'])
+//   - createdAt: timestamp (required)
+//
+// Collection: salons
+// Document ID: auto
+// Fields:
+//   - ownerId: string (required)
+//   - name: string (required)
+//   - address: string (required)
+//   - location: geopoint (required)
+//   - frontPhotoUrl: string (required)
+//   - services: array of objects (required)
+//   - isApproved: boolean (required)
+//   - isLive: boolean (required)
+//   - liveExpiryDate: timestamp (required)
+//   - createdAt: timestamp (required)
+//   - totalBookings: number (required)
+//   - rating: number (required)
+//
+// Collection: bookings
+// Document ID: auto
+// Fields:
+//   - userId: string (required)
+//   - salonId: string (required)
+//   - serviceIds: array of strings (required)
+//   - totalPrice: number (required)
+//   - date: string (required, YYYY-MM-DD)
+//   - timeSlot: string (required, HH:mm)
+//   - status: string (required, ['pending', 'accepted', 'rejected', 'completed'])
+//   - createdAt: timestamp (required)
+//   - chatEnabled: boolean (required)
+//
+// Collection: bookings/{bookingId}/messages
+// Document ID: auto
+// Fields:
+//   - senderId: string (required)
+//   - text: string (required)
+//   - timestamp: timestamp (required)
+//   - read: boolean (required)
+//
+// Collection: payments
+// Document ID: auto
+// Fields:
+//   - salonId: string (required)
+//   - amount: number (required)
+//   - monthYear: string (required)
+//   - qrCodeUrl: string (required)
+//   - status: string (required, ['paid', 'unpaid'])
+//   - expiryDate: timestamp (required)
+//
+// Collection: users/{userId}/notifications
+// Document ID: auto
+// Fields:
+//   - title: string (required)
+//   - body: string (required)
+//   - read: boolean (required)
+//   - createdAt: timestamp (required)
+//   - type: string (required, ['booking', 'message'])
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "citimobilesknr@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isSalonOwner(salonId) {
+      return isAuthenticated() && get(/databases/$(database)/documents/salons/$(salonId)).data.ownerId == request.auth.uid;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'email', 'name', 'photoURL', 'role', 'createdAt']) &&
+             data.uid is string && data.uid.size() > 0 &&
+             data.email is string && data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$") &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.photoURL is string && data.role in ['user', 'owner', 'admin'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidSalon(data) {
+      return hasOnlyAllowedFields(['ownerId', 'name', 'address', 'location', 'frontPhotoUrl', 'services', 'isApproved', 'isLive', 'liveExpiryDate', 'createdAt', 'totalBookings', 'rating']) &&
+             data.ownerId is string && data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.address is string && data.address.size() > 0 &&
+             data.location is latlng &&
+             data.frontPhotoUrl is string &&
+             data.services is list &&
+             data.isApproved is bool &&
+             data.isLive is bool &&
+             data.liveExpiryDate is timestamp &&
+             data.createdAt is timestamp &&
+             data.totalBookings is number &&
+             data.rating is number;
+    }
+
+    function isValidBooking(data) {
+      return hasOnlyAllowedFields(['userId', 'salonId', 'serviceIds', 'totalPrice', 'date', 'timeSlot', 'status', 'createdAt', 'chatEnabled']) &&
+             data.userId is string && data.salonId is string &&
+             data.serviceIds is list &&
+             data.totalPrice is number &&
+             data.date is string && data.date.matches("^\\d{4}-\\d{2}-\\d{2}$") &&
+             data.timeSlot is string && data.timeSlot.matches("^\\d{2}:\\d{2}$") &&
+             data.status in ['pending', 'accepted', 'rejected', 'completed'] &&
+             data.createdAt is timestamp &&
+             data.chatEnabled is bool;
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role != 'admin' || isAdmin());
+      allow update: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin());
+
+      match /notifications/{notificationId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    match /salons/{salonId} {
+      allow read: if (resource.data.isApproved == true && resource.data.isLive == true) || isAdmin() || (isAuthenticated() && resource.data.ownerId == request.auth.uid);
+      allow create: if isAuthenticated() && isValidSalon(request.resource.data) && request.resource.data.ownerId == request.auth.uid && request.resource.data.isApproved == false && request.resource.data.isLive == false;
+      allow update: if isAdmin() || (isAuthenticated() && resource.data.ownerId == request.auth.uid && isValidSalon(request.resource.data) && request.resource.data.ownerId == resource.data.ownerId && (isAdmin() || (request.resource.data.isApproved == resource.data.isApproved && request.resource.data.isLive == resource.data.isLive)));
+    }
+
+    match /bookings/{bookingId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isSalonOwner(resource.data.salonId) || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidBooking(request.resource.data) && request.resource.data.status == 'pending';
+      allow update: if isAuthenticated() && (
+        (resource.data.userId == request.auth.uid && request.resource.data.status == 'pending' && isValidBooking(request.resource.data)) ||
+        (isSalonOwner(resource.data.salonId) && isValidBooking(request.resource.data)) ||
+        isAdmin()
+      );
+
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/bookings/$(bookingId)).data.userId == request.auth.uid || isSalonOwner(get(/databases/$(database)/documents/bookings/$(bookingId)).data.salonId) || isAdmin());
+        allow create: if isAuthenticated() && (get(/databases/$(database)/documents/bookings/$(bookingId)).data.userId == request.auth.uid || isSalonOwner(get(/databases/$(database)/documents/bookings/$(bookingId)).data.salonId)) && request.resource.data.senderId == request.auth.uid;
+      }
+    }
+
+    match /payments/{paymentId} {
+      allow read: if isAdmin() || (isAuthenticated() && isSalonOwner(resource.data.salonId));
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+    }
+  }
+}

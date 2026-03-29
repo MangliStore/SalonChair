@@ -1,0 +1,5 @@
+{
+  "name": "Salon Chair",
+  "description": "A premium salon booking marketplace with real-time updates, geolocation-based discovery, and secure payments.",
+  "requestFramePermissions": ["geolocation", "camera", "notifications"]
+}

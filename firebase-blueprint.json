@@ -1,0 +1,112 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "owner", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Salon": {
+      "title": "Salon",
+      "description": "Salon listing information",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string" },
+        "name": { "type": "string" },
+        "address": { "type": "string" },
+        "location": { "type": "object", "description": "GeoPoint with latitude and longitude" },
+        "frontPhotoUrl": { "type": "string" },
+        "services": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "price": { "type": "number" },
+              "duration": { "type": "number", "description": "Duration in minutes" }
+            }
+          }
+        },
+        "isApproved": { "type": "boolean" },
+        "isLive": { "type": "boolean" },
+        "liveExpiryDate": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "totalBookings": { "type": "number" },
+        "rating": { "type": "number" }
+      },
+      "required": ["ownerId", "name", "isApproved", "isLive"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Appointment booking information",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "salonId": { "type": "string" },
+        "serviceIds": { "type": "array", "items": { "type": "string" } },
+        "totalPrice": { "type": "number" },
+        "date": { "type": "string", "format": "date" },
+        "timeSlot": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "rejected", "completed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "chatEnabled": { "type": "boolean" }
+      },
+      "required": ["userId", "salonId", "date", "timeSlot", "status"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Message in a booking chat",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["senderId", "text", "timestamp"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Subscription payment for salons",
+      "type": "object",
+      "properties": {
+        "salonId": { "type": "string" },
+        "amount": { "type": "number" },
+        "monthYear": { "type": "string" },
+        "qrCodeUrl": { "type": "string" },
+        "status": { "type": "string", "enum": ["paid", "unpaid"] },
+        "expiryDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["salonId", "amount", "status"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "User notification",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "type": { "type": "string", "enum": ["booking", "message"] }
+      },
+      "required": ["title", "body", "read", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "User profiles" },
+    "/salons/{salonId}": { "schema": "Salon", "description": "Salon listings" },
+    "/bookings/{bookingId}": { "schema": "Booking", "description": "Appointment bookings" },
+    "/bookings/{bookingId}/messages/{messageId}": { "schema": "ChatMessage", "description": "Chat messages for a booking" },
+    "/payments/{paymentId}": { "schema": "Payment", "description": "Salon subscription payments" },
+    "/users/{userId}/notifications/{notificationId}": { "schema": "Notification", "description": "User notifications" }
+  }
+}
